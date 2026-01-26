@@ -1,0 +1,11 @@
+[
+  {"role": "ap", "Color": "1E90FF"},
+  {"role": "firewall", "Color": "FF4500"},
+  {"role": "consoleServer", "Color": "8B008B"},
+  {"role": "l3switch", "Color": "228B22"},
+  {"role": "lb", "Color": "FFD700"},
+  {"role": "router", "Color": "00008B"},
+  {"role": "switch", "Color": "32CD32"},
+  {"role": "vgw", "Color": "FF69B4"},
+  {"role": "wlc", "Color": "00CED1"}
+]
