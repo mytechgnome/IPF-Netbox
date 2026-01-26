@@ -54,7 +54,7 @@ else:
     CreateEnvFile.create_env_file()
 # endregion
 # region ## Set variables from .env file
-load_dotenv()
+load_dotenv(override=True)
 modellnamesensitivity = float(os.getenv('modellnamesensitivity', '0.8'))
 # endregion
 

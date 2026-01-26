@@ -45,10 +45,10 @@ print(f'Creating log directory at {log_dir}')
 os.makedirs(log_dir, exist_ok=True)
 # endregion
 # region ## Load IP Fabric configuration
-ipfbaseurl, ipftoken, ipfheaders = IPFloader.load_ipf_config()
+ipfbaseurl, ipftoken, ipfheaders, ipflimit = IPFloader.load_ipf_config()
 # endregion
 # region ## Load NetBox configuration
-netboxbaseurl, netboxtoken, netboxheaders = NetBoxloader.load_netbox_config()
+netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = NetBoxloader.load_netbox_config()
 # endregion
 # endregion
 

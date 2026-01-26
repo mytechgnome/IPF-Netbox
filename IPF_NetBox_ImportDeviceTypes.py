@@ -50,10 +50,10 @@ import datetime
 starttime = datetime.datetime.now()
 
 # region ## Load IP Fabric configuration
-ipfbaseurl, ipftoken, ipfheaders = IPFloader.load_ipf_config()
+ipfbaseurl, ipftoken, ipfheaders, ipflimit = IPFloader.load_ipf_config()
 # endregion
 # region ## Load NetBox configuration
-netboxbaseurl, netboxtoken, netboxheaders = NetBoxloader.load_netbox_config()
+netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = NetBoxloader.load_netbox_config()
 # endregion
 
 # region # Define variables
@@ -66,7 +66,7 @@ else:
     CreateEnvFile.create_env_file()
 # endregion
 # region ## Set variables from .env file
-load_dotenv()
+load_dotenv(override=True)
 vendornamesensitivity = float(os.getenv('vendornamesensitivity', '0.8'))
 modellnamesensitivity = float(os.getenv('modellnamesensitivity', '0.8'))
 deviceimagesensitivity = float(os.getenv('deviceimagesensitivity', '0.8'))
