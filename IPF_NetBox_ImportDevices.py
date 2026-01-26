@@ -27,10 +27,10 @@ from difflib import get_close_matches
 starttime = datetime.datetime.now()
 
 # region ## Load IP Fabric configuration
-ipfbaseurl, ipftoken, ipfheaders = IPFloader.load_ipf_config()
+ipfbaseurl, ipftoken, ipfheaders, ipflimit = IPFloader.load_ipf_config()
 # endregion
 # region ## Load NetBox configuration
-netboxbaseurl, netboxtoken, netboxheaders = NetBoxloader.load_netbox_config()
+netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = NetBoxloader.load_netbox_config()
 # endregion
 # region ## Define paths
 try:
@@ -159,7 +159,9 @@ for device in ipf_devices:
 # region ## Append data from lookup tables
     device['device_type_ID'] = device_type_lookup.get(device['model'], None)
     if not device['device_type_ID']: # Attempt fuzzy match if exact match not found
-        device['device_type_ID'] = get_close_matches(device['model'], list(device_type_lookup.keys()), n=1, cutoff=modellnamesensitivity)
+        fuzzy_match = get_close_matches(device['model'], list(device_type_lookup.keys()), n=1, cutoff=modellnamesensitivity)
+        if fuzzy_match:
+            device['device_type_ID'] = device_type_lookup.get(fuzzy_match[0], None)
     device['device_role_ID'] = device_role_lookup.get(device['devType'], None)
     device['platform_ID'] = platform_lookup.get(device['family'], None)
     device['site_ID'] = site_lookup.get(device['siteName'], None)

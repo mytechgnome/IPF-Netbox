@@ -110,17 +110,6 @@ for module in valid_modules:
 print(f'Total modules updated for VC membership: {vc_updates}')
 # endregion
 # region ## Split out module types
-# region ### Classify modules into buckets
-module_buckets = {
-    'sfp': [],
-    'disk': [],
-    'fan': [],
-    'network': [],
-    'power': [],
-    'supervisor': [],
-    'other': []
-}
-# endregion
 # region ### Define sorting criteria
 SFP_regex = re.compile(r"^\w{2,}\/\d", re.IGNORECASE)
 module_keywords = [ 
@@ -135,6 +124,11 @@ module_keywords = [
     ("power", {"power"}),
     ("supervisor", {"supervisor"}),
 ]
+# region ### Create module buckets
+module_buckets = {i[0]: [] for i in module_keywords}
+module_buckets["other"] = []
+# endregion
+
 # endregion
 # region ### Classify function
 def classify_module(module: dict) -> str:
@@ -216,7 +210,6 @@ def module_import(source_modules):
             device_matches = [dev for dev in netbox_devices if dev['name'] and module['hostname'] and dev['name'].lower() == module['hostname'].lower()]     
         if device_matches:
             device_id = device_matches[0]['id']
-        
     # endregion
     # region #### Find Module Bay ID in NetBox
         module_bay_id = None
@@ -224,7 +217,6 @@ def module_import(source_modules):
             device_mbs = [mb for mb in netbox_module_bays if mb.get('device', {}).get('id') == device_id]
             target_name = (module.get('name') or '').strip()
     # region ##### Match by module bay name if possible, using close matches from name, cat, dscr, or pid
-
     # region ###### Exact name match first (most bays use stable names like 'GigabitEthernet1/7', 'Te1/1/8', 'Slot 6', etc.)
             exact_mb = next((mb for mb in device_mbs if (mb.get('name') or '').strip() == target_name), None)
             if exact_mb:
