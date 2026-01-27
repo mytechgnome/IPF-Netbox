@@ -55,7 +55,7 @@ modulelnamesensitivity = float(os.getenv('modulelnamesensitivity', '0.8'))
 # endregion
 
 # region # Export modules from IP Fabric
-ipf_modules = IPFexporter.export_ipf_data('inventory/pn', ['hostname', 'name', 'dscr', 'pid', 'sn'])
+ipf_modules = IPFexporter.export_ipf_data('inventory/pn', ['hostname', 'name', 'dscr', 'pid', 'sn', 'deviceSn'])
 print(f'Total modules fetched from IP Fabric: {len(ipf_modules)}')
 # endregion
 
@@ -84,9 +84,13 @@ print(f'Total VC members fetched from IP Fabric: {len(ipf_vcmembers)}')
 valid_modules = []
 for i in ipf_modules:
     try:
-         if i['name'] not in i['pid'] and i['dscr'] not in i['pid'] and 'ap' not in i['name'].lower() and 'stack' not in i['pid'].lower():
-            print(f'{i['name']},{i['pid']}')
-            valid_modules.append(i)
+        if i['sn'] == i['deviceSn']:
+            continue  # skip base device entries
+        if i['pid'] == i['dscr']:
+            continue  # skip entries where PID equals description
+        if 'Fabric Extender Module' in i['dscr']:
+            continue  # skip Fabric Extender Modules - these are the FEX devices themselves, not modules
+        valid_modules.append(i)
     except:
         pass
 print(f'Total valid modules to import: {len(valid_modules)}')
@@ -174,7 +178,15 @@ for bucket, modules in module_buckets.items():
 NOTE
 Need to determine how to handle modules with no PID, or with "unspecified" PID.
 Particularly for SFPs, many may not have a PID listed in IP Fabric. Perhaps create a generic SFP module type in NetBox to use for these cases?
+Blank:
+  1000BaseLX SFP
+  1000BaseSX SFP
+Unspecified:
+  1000BaseLH
+  1000BaseSX
+  1000BaseT
 '''
+
 
 # region ## Append module type ID and Device ID from NetBox to module data from IP Fabric
 # region ### Define function to match and prepare module data for import
@@ -300,6 +312,8 @@ It seems that if 'replicate_components' is enabled (default), and 'adopt_compone
 Meaning that devices with SFP slots could have an SFP interface created, and then when the SFP module is added, the existing interface is updated rather than creating a duplicate.
 Need to test if the interface configuration is preserved in this case (eg. description, enabled/disabled state, etc.)
 '''
+
+pause = input('Press Enter to continue with module creation in NetBox, or Ctrl-C to abort...')
 
 # region # Load modules into NetBox
 for i in module_buckets.keys():

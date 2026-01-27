@@ -1,0 +1,60 @@
+---
+sfp:
+  - keywords:
+    - "sfp"
+    - "gbic"
+    - "glc"
+  - IPFmodule_name_format:
+    - "\d\/(\d+)$" # eg. "GigabitEthernet1/1/1
+  - Netbox_name_format:
+disk:
+  - keywords:
+    - "disk"
+    - "ssd"
+    - "hdd"
+  - IPFmodule_name_format:
+    - "Switch\s?\d?\s?Disk(\d+)\s?SATA" # eg. "Switch 1 Disk0 SATA"
+    - "HD(\d+)" # eg. "HD0"
+    - Netbox_name_format:
+fan:
+  - keywords:
+    - "fan"
+  - IPFmodule_name_format:
+    - "slot\s(\d+)" # eg. "Slot 23"
+    - "(\w{1,2})$" # Last 1 or 2 word characters - eg. Switch 1 FRU Uplink Module 1
+    - Netbox_name_format:
+network:
+  - keywords:
+    - "uplink"
+    - "fabric card"
+  - IPFmodule_name_format:
+    - "slot\s(\d+)" # eg. "Slot 23"
+    - "(\w{1,2})$" # Last 1 or 2 word characters - eg. Switch 1 FRU Uplink Module 1
+    - Netbox_name_format:
+power:
+  - keywords:
+    - "power"
+  - IPFmodule_name_format:
+    - "slot\s(\d+)" # eg. "Slot 1 Power Supply"
+    - "(\w{1,2})$" # Last 1 or 2 word characters - eg. Switch 1 FRU Uplink Module 1
+    - Netbox_name_format:
+    - "Power\s?Supply\s?(\w+)?" # eg. "Power Supply 1" "Power Supply-A"
+    - "PSU\s?\W?(\w+)?" # eg. "PSU1" "PSU-1" or "PSUA"
+    - "PS(\w+)?" # eg. "PS1" "PS-A"
+
+stack:
+    - keywords:
+        - "stack"
+        - "stackwise"
+    - IPFmodule_name_format:
+        - "StackPort\d+\/(\d+)" # eg. "StackPort1/1"
+    - Netbox_name_format:
+supervisor:
+  - keywords:
+    - "supervisor"
+  - IPFmodule_name_format:
+    - "slot\s(\d+)" # eg. "Slot 1"
+    - "module\s(\d+)" # eg. "Module 1"
+    - "(\w{1,2})$" # Last 1 or 2 word characters - eg. Switch 1 FRU Uplink Module 1
+  - Netbox_name_format:
+    - "Supervisor\s?(\d+)" # eg. "Supervisor 1"
