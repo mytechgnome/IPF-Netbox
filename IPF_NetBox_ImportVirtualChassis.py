@@ -14,6 +14,7 @@ TO-DO:
 import IPFloader
 import IPFexporter
 import NetBoxloader
+from NetBoxexporter import export_netbox_data
 import requests
 import datetime
 
@@ -28,21 +29,49 @@ netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = NetBoxloader.load_netbo
 # endregion
 
 # region # Export Virtual Chassis from IP Fabric
-ipf_vc = IPFexporter.export_ipf_data('platforms/stack', ['master', 'membersCount'])
+ipf_vc = []
+# region ## Get stack data from IP Fabric
+ipf_stack = IPFexporter.export_ipf_data('platforms/stack', ['master'])
+for i in ipf_stack:
+    ipf_vc.append(i['master'])
+# endregion
+# region ## Get VSS data from IP Fabric
+ipf_vss = IPFexporter.export_ipf_data('platforms/vss/overview', ['hostname'])
+for i in ipf_vss:
+    ipf_vc.append(i['hostname'])
 print(f'Total virtual chassis fetched from IP Fabric: {len(ipf_vc)}')
+# endregion
 # endregion
 
 # region # Transform VC members from IP Fabric
-''' No transformation needed for VC members '''
+# region ## Get existing VC configuration
+nb_vc = export_netbox_data('dcim/virtual-chassis')
+existing_vc = {}
+for i in nb_vc:
+    existing_vc[i['name'].lower()] = i['id']
+print(f'NetBox current has {len(existing_vc)} virtual chassis')
+# endregion
+# region ## Remove existing VCs from import list
+vc_add = []
+for vc in ipf_vc:
+    if vc.lower() not in existing_vc.keys():
+        vc_add.append(vc)
+print(f'Virtual chassis not existing in NetBox (will be imported): {len(vc_add)}')
+# endregion
+# region ## Identify VC in NetBox that are no longer in IP Fabric
+ipf_vc_lower = [i.lower() for i in ipf_vc]
+vc_decom = []
+for vc in existing_vc.keys():
+    if vc not in ipf_vc_lower:
+        vc_decom.append(existing_vc[vc])
 # endregion
 
 # region # Load Virtual Chassis into NetBox
 url = f'{netboxbaseurl}dcim/virtual-chassis/'
 vcSuccessCount = 0
 vcFailCount = 0
-for vc in ipf_vc:
-    vc_master = vc['master']
-    vc_members_count = vc['membersCount']
+for vc in vc_add:
+    vc_master = vc
     payload = {
         'name': vc_master,
         'slug': vc_master.lower().replace(" ", "-"),
@@ -56,11 +85,20 @@ for vc in ipf_vc:
         vcFailCount += 1
         print(f'Failed to import virtual chassis {vc_master} into NetBox. Status Code: {r.status_code}, Response: {r.text}')
 # endregion
+# region ## Flag VCs no longer in IP Fabric
+for vc in vc_decom:
+    url = f'{netboxbaseurl}dcim/virtual-chassis/{vc}/'
+    payload = {
+        'description': f'Not present in IP Fabric - {starttime.strftime("%Y-%m-%d %H:%M:%S")}'
+    }
+    r = requests.patch(url,headers=netboxheaders,verify=False)
 # region # Summary and logging
 endtime = datetime.datetime.now()
 duration = endtime - starttime
 print(f'Virtual Chassis import process completed. Duration: {duration}')
 print(f'Total virtual chassis processed: {len(ipf_vc)}')
+print(f'Total virtual chassis to import: {len(vc_add)}')
+print(f'Total virtual chassis to decommission: {len(vc_decom)}')
 print(f'Total virtual chassis successfully imported: {vcSuccessCount}')
 print(f'Total virtual chassis failed to import: {vcFailCount}')
 # endregion

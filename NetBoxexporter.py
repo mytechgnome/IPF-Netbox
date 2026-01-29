@@ -29,8 +29,11 @@ Returns:
 '''
 
 # region # Define function
-def export_netbox_data(endpoint, netboxlimit=netboxlimit):
-    url = f'{netboxbaseurl}{endpoint}/?limit={netboxlimit}'
+def export_netbox_data(endpoint, netboxlimit=netboxlimit, filters=[]):
+    netboxfilter = ''
+    for f in filters:
+        netboxfilter += f'&{f}'
+    url = f'{netboxbaseurl}{endpoint}/?limit={netboxlimit}{netboxfilter}'
     netboxstart = 0
     r = requests.get(url,headers=netboxheaders,verify=False)
     netbox_data = r.json()['results']
