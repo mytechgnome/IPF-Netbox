@@ -191,7 +191,7 @@ for device in ipf_vssmembers:
 # endregion
 # region #### Create new device entry for non-master members
     else:
-        for idx, p in enumerate(ipf_pns):
+        for p in ipf_pns:
             if p['sn'] == device['sn']:
                 if p['pid'] != "":
                     pn = p['pid']
@@ -302,7 +302,7 @@ deviceSuccessCount = 0
 deviceUpdateCount = 0
 deviceFailCount = 0
 deviceimportcounter = 0
-devicesfailed = {}
+devicesfailed = []
 vc_masters = []
 # endregion
 # region ## Import devices
@@ -316,7 +316,7 @@ for device in transform_list:
     site = device['site_ID']
     status = 'active'
     virtual_chassis = device['vc_ID'] if device['vc_ID'] else None
-    vc_position = device['member'] if device ['member'] else None
+    vc_position = device['member']
     description = f'Imported from IP Fabric'
     comments = f'Role: {device["vc_role"]}, HW Ver: {device["vc_hwver"]}, Image: {device["vc_image"]}, Ver: {device["vc_ver"]}, Updated on {starttime.strftime("%Y-%m-%d %H:%M:%S")}'
     payload = {
@@ -349,7 +349,8 @@ for device in transform_list:
         deviceUpdateCount += 1
     else:
         deviceFailCount += 1
-        devicesfailed[devicename] = r.text
+        error_text = f'{devicename}, {r.text}, {payload}, {device}'
+        devicesfailed.append(error_text)
     deviceimportcounter += 1
     print(f'Import progress: {deviceimportcounter}/{len(transform_list)} devices imported.')
 # endregion
@@ -387,9 +388,9 @@ print(f'Total devices successfully imported: {deviceSuccessCount}')
 print(f'Total devices successfully updated: {deviceUpdateCount}')
 print(f'Total devices failed to import: {deviceFailCount}')
 with open(os.path.join(log_dir, 'errors_importdevices.csv'), 'w') as f:
-    f.write('Device Name,Error Message\n')
-    for devicename, errormsg in devicesfailed.items():
-        f.write(f'{devicename},"{errormsg}"\n')
+    f.write('Device Name,Error Message,Payload,Device Details\n')
+    for error_text in devicesfailed:
+        f.write(f'{error_text}\n')
 with open(os.path.join(log_dir, 'errors_missingdata.csv'), 'w') as file:
     file.write('Error Type,Count,Details\n')
     if required_fields_type_missing_count > 0:

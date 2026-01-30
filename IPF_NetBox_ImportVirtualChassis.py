@@ -79,11 +79,9 @@ for vc in vc_add:
     }
     r = requests.post(url,headers=netboxheaders,json=payload,verify=False)
     if r.status_code == 201:
-        print(f'Successfully imported virtual chassis {vc_master} into NetBox.')
         vcSuccessCount += 1
     else:
         vcFailCount += 1
-        print(f'Failed to import virtual chassis {vc_master} into NetBox. Status Code: {r.status_code}, Response: {r.text}')
 # endregion
 # region ## Flag VCs no longer in IP Fabric
 for vc in vc_decom:
@@ -91,7 +89,7 @@ for vc in vc_decom:
     payload = {
         'description': f'Not present in IP Fabric - {starttime.strftime("%Y-%m-%d %H:%M:%S")}'
     }
-    r = requests.patch(url,headers=netboxheaders,verify=False)
+    r = requests.patch(url,headers=netboxheaders,json=payload,verify=False)
 # region # Summary and logging
 endtime = datetime.datetime.now()
 duration = endtime - starttime
