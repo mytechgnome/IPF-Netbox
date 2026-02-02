@@ -281,6 +281,7 @@ print(f'Total unique device types fetched from IP Fabric: {len(ipf_models)}')
 # region ## Transform data prior to loading into NetBox
 print(f'Importing device types into NetBox...')
 # region ### Lookup NetBox Manufacturer ID
+importCounter = 0
 for i in ipf_models:
     objecttype = 'device'
     vendor = i['vendor']
@@ -378,6 +379,8 @@ for i in ipf_models:
             errors_importdevice.append(import_error)
             if r.text.find('already exists') != -1:
                 duplicate += 1
+        importCounter += 1
+        print(f'Import progress: {importCounter}/{len(ipf_models)} device types imported.')
 # endregion
 # endregion
 # endregion
@@ -420,6 +423,7 @@ for profile in r.json()['results']:
 # endregion
 # region ## Prepare module data for import
 print('Importing modules into NetBox...')
+importCounter = 0
 for i in modules['modules']:
     vendor = i
     lowermanufacturernames = [manufacturer.lower() for manufacturer in manufacturers]
@@ -480,6 +484,8 @@ for i in modules['modules']:
             nomatch += 1
             error_text = f'{vendorlibrary},{module}'
             errors_matchmodule.append(error_text)
+        importCounter += 1
+        print(f'Import progress: {importCounter}/{len(ipf_modules)} module types imported.')
 print(f'Netbox module import complete.')
 # endregion
 # endregion
