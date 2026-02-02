@@ -189,6 +189,7 @@ for device in ipf_vssmembers:
             vc_device['hostname'] = f"{vc_device['hostname']}/{device['chassisId']}"
         vc_device['master'] = device['hostname']
         vc_device['member'] = device['chassisId']
+        vc_device['vc_role'] = 'active' if device['state'] == 'active' else 'standby'
 # endregion
 # region #### Create new device entry for non-master members
     else:
@@ -205,6 +206,7 @@ for device in ipf_vssmembers:
         new_device['member']   = device['chassisId']
         new_device['model']    = pn
         new_device['sn']       = device['sn']
+        new_device['vc_role']  = device['state']
         transform_list.append(new_device)
 # endregion
 # endregion
@@ -221,8 +223,9 @@ for device in ipf_stackmembers:
             vc_device['hostname'] = f"{vc_device['hostname']}"
         else:
             vc_device['hostname'] = f"{vc_device['hostname']}/{device['member']}"
-        vc_device['master'] = device['master']
-        vc_device['member'] = device['member']
+        vc_device['master']  = device['master']
+        vc_device['member']  = device['member']
+        vc_device['vc_role'] = device['role']
  # endregion
 # region #### Create new device entry for non-master members
     else:
@@ -234,6 +237,7 @@ for device in ipf_stackmembers:
         new_device['member']   = device['member']
         new_device['model']    = device['pn']
         new_device['sn']       = device['memberSn']
+        new_device['vc_role']  = device['role']
         transform_list.append(new_device)
 # endregion
 # endregion
@@ -343,19 +347,17 @@ for device in transform_list:
     if device['new'] == False:
         url = f'{netboxbaseurl}dcim/devices/{device["nb_id"]}/'
         r = requests.patch(url,headers=netboxheaders,json=payload,verify=False)
-        if device['vc_role'] == 'active':
-            device_ID = device['nb_id']
-            vc_masters.append([device["vc_ID"],device_ID])
     else:
         r = requests.post(url,headers=netboxheaders,json=payload,verify=False)
     if r.status_code == 200 or r.status_code == 201:
+        device_ID = r.json()['id']
+        if device['nb_id'] != device_ID:
+            device['nb_id'] = device_ID
         if device['vc_role'] == 'active':
-            device_ID = r.json()['id']
             vc_masters.append([device["vc_ID"],device_ID])
         if device['member']:
-            device_ID = r.json()['id']
-            vc_members.append([device_ID,device["nb_id"]])
-    if r.status_code == 201: # New device created, capture VC master IDs
+            vc_members.append([device_ID, device['member']])
+    if r.status_code == 201:
         deviceSuccessCount += 1
     elif r.status_code == 200:
         deviceUpdateCount += 1
@@ -364,7 +366,7 @@ for device in transform_list:
         error_text = f'{devicename}, {r.text}, {payload}, {device}'
         devicesfailed.append(error_text)
     deviceimportcounter += 1
-    print(f'Import progress: {deviceimportcounter}/{len(transform_list)} devices imported.')
+    print(f'Import progress: {deviceimportcounter/len(transform_list)*100:.2f}% Complete - ({deviceimportcounter}/{len(transform_list)}) devices imported.', end="\r")
 # endregion
 # endregion
 # region ## Update VC masters with member IDs
@@ -393,7 +395,7 @@ def update_vc_members(update_type, device_id, member_number):
         if current_name:
             prefix = current_name.group(1)
             suffix = current_name.group(2)
-            new_name = f'{prefix}{member_number}/{suffix}'
+            new_name = f'{prefix}{member_number}{suffix}'
             url = f'{netboxbaseurl}dcim/{update_type}/{object["id"]}/'
             payload = {
                 'name': new_name,
@@ -407,7 +409,8 @@ def update_vc_members(update_type, device_id, member_number):
                 UpdateCount += 1
     return UpdateCount, FailCount, Errors
 # endregion
-# region ### Process VC members
+# region ### Adjust interface and module names for VC members
+vc_updates = 0
 for member in vc_members:
     device_id = int(member[0])
     member_number = int(member[1])
@@ -421,13 +424,22 @@ for member in vc_members:
     moduleUpdateCount += update_count
     moduleFailCount += fail_count
     moduleErrors.extend(errors)
+    vc_updates += 1
+    print(f'Update status: {vc_updates/len(vc_members)*100:.2f}% Complete - ({vc_updates}/{len(vc_members)}) members updated.', end="\r")
+print(f'Total interfaces updated: {interfaceUpdateCount}, failed: {interfaceFailCount}')
+print(f'Total modules updated: {moduleUpdateCount}, failed: {moduleFailCount}')
 # endregion
 # endregion
 
 # endregion
+'''
+Need to test linecard and uplink module updates as well. They should work as the line cards and uplinks are part of the device's module bays, while VC members are unique devices in NetBox.
+'''
+
 # region ## Change status for devices no longer in IP Fabric
 '''
 To be implemented - identify devices in NetBox that are no longer present in IP Fabric and change their status to 'decommissioned'.
+Maybe this should be a separate script?
 '''
 # endregion
 # endregion
@@ -451,4 +463,12 @@ with open(os.path.join(log_dir, 'errors_missingdata.csv'), 'w') as file:
         file.write(f'Device Role Missing,{required_fields_role_missing_count},"{set(missing_roles)}"\n')
     if required_fields_site_missing_count > 0:
         file.write(f'Site Missing,{required_fields_site_missing_count},"{set(missing_sites)}"\n')
+with open(os.path.join(log_dir, 'errors_interfaceupdates.csv'), 'w') as f:
+    f.write('Device ID,Error Message,Payload,Object Details\n')
+    for error_text in interfaceErrors:
+        f.write(f'{error_text}\n')
+with open(os.path.join(log_dir, 'errors_moduleupdates.csv'), 'w') as f:
+    f.write('Device ID,Error Message,Payload,Object Details\n')
+    for error_text in moduleErrors:
+        f.write(f'{error_text}\n')
 # endregion

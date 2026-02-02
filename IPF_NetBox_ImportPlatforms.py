@@ -55,7 +55,6 @@ for platform in ipf_platforms:
     }
     r = requests.post(url,headers=netboxheaders,json=payload,verify=False)
     if r.status_code == 201:
-        print(f'Successfully imported platform {platform_name} into NetBox.')
         platformSuccessCount += 1
     else:
         platformFailCount += 1

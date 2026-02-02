@@ -380,7 +380,7 @@ for i in ipf_models:
             if r.text.find('already exists') != -1:
                 duplicate += 1
         importCounter += 1
-        print(f'Import progress: {importCounter}/{len(ipf_models)} device types imported.')
+        print(f'Import progress: {importCounter/len(ipf_models)*100:.2f}% Complete - ({importCounter}/{len(ipf_models)}) device types imported.', end="\r")
 # endregion
 # endregion
 # endregion
@@ -485,7 +485,7 @@ for i in modules['modules']:
             error_text = f'{vendorlibrary},{module}'
             errors_matchmodule.append(error_text)
         importCounter += 1
-        print(f'Import progress: {importCounter}/{len(ipf_modules)} module types imported.')
+        print(f'Import progress: {importCounter/len(ipf_modules)*100:.2f}% Complete - ({importCounter}/{len(ipf_modules)}) module types imported.', end="\r")
 print(f'Netbox module import complete.')
 # endregion
 # endregion

@@ -48,7 +48,6 @@ for ssid in ipf_ssids:
     }
     r = requests.post(url,headers=netboxheaders,json=payload,verify=False)
     if r.status_code == 201:
-        print(f'Successfully imported SSID {ssid_name} into NetBox.')
         ssidSuccessCount += 1
     else:
         print(f'Failed to import SSID {ssid_name} into NetBox. Status Code: {r.status_code}, Response: {r.text}')
