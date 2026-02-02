@@ -23,6 +23,7 @@ import requests
 import os
 from pathlib import Path
 import datetime
+import re
 from difflib import get_close_matches
 
 starttime = datetime.datetime.now()
@@ -302,8 +303,15 @@ deviceSuccessCount = 0
 deviceUpdateCount = 0
 deviceFailCount = 0
 deviceimportcounter = 0
+interfaceUpdateCount = 0
+interfaceFailCount = 0
+moduleUpdateCount = 0
+moduleFailCount = 0
+interfaceErrors = []
+moduleErrors = []
 devicesfailed = []
 vc_masters = []
+vc_members = []
 # endregion
 # region ## Import devices
 url = f'{netboxbaseurl}dcim/devices/'
@@ -340,10 +348,14 @@ for device in transform_list:
             vc_masters.append([device["vc_ID"],device_ID])
     else:
         r = requests.post(url,headers=netboxheaders,json=payload,verify=False)
-    if r.status_code == 201: # New device created, capture VC master IDs
+    if r.status_code == 200 or r.status_code == 201:
         if device['vc_role'] == 'active':
             device_ID = r.json()['id']
             vc_masters.append([device["vc_ID"],device_ID])
+        if device['member']:
+            device_ID = r.json()['id']
+            vc_members.append([device_ID,device["nb_id"]])
+    if r.status_code == 201: # New device created, capture VC master IDs
         deviceSuccessCount += 1
     elif r.status_code == 200:
         deviceUpdateCount += 1
@@ -369,9 +381,49 @@ for i in vc_masters:
 # endregion
 
 # region ## Update interface naming for VC members
-'''
-To be implemented - update interface names for VC members to include member number prefix.
-'''
+# region ### Define function to update interface and module names
+def update_vc_members(update_type, device_id, member_number):
+    Errors = []
+    UpdateCount = 0
+    FailCount = 0
+    objects = export_netbox_data(f'dcim/{update_type}', netboxlimit=netboxlimit, filters=[f'device_id={device_id}'])
+    for object in objects:
+        name = object['name']
+        current_name = re.match(r"(\w*)\d+(\/\d+\/\d+)$", name)
+        if current_name:
+            prefix = current_name.group(1)
+            suffix = current_name.group(2)
+            new_name = f'{prefix}{member_number}/{suffix}'
+            url = f'{netboxbaseurl}dcim/{update_type}/{object["id"]}/'
+            payload = {
+                'name': new_name,
+                'display': new_name
+            }
+            r = requests.patch(url,headers=netboxheaders,json=payload,verify=False)
+            if r.status_code != 200:
+                Errors.append(f'{device_id}: {r.text}, {payload}, {object}')
+                FailCount += 1
+            else:
+                UpdateCount += 1
+    return UpdateCount, FailCount, Errors
+# endregion
+# region ### Process VC members
+for member in vc_members:
+    device_id = int(member[0])
+    member_number = int(member[1])
+    if member_number == 1:
+        continue  # Skip master member
+    update_count, fail_count, errors = update_vc_members('interfaces', device_id, member_number)
+    interfaceUpdateCount += update_count
+    interfaceFailCount += fail_count
+    interfaceErrors.extend(errors)
+    update_count, fail_count, errors = update_vc_members('module-bays', device_id, member_number)
+    moduleUpdateCount += update_count
+    moduleFailCount += fail_count
+    moduleErrors.extend(errors)
+# endregion
+# endregion
+
 # endregion
 # region ## Change status for devices no longer in IP Fabric
 '''
