@@ -412,7 +412,8 @@ df = df[['vendor', 'data']].dropna()
 modules = {"modules": {}}
 for vendor, group in df.groupby('vendor'):
     modules["modules"][vendor] = {datum for datum in group['data'].unique()}
-print(f'Total unique module vendors fetched from IP Fabric: {len(modules["modules"])}')
+unique_modules = sum(len(m) for m in modules["modules"].values())
+print(f'Total unique modules from IP Fabric: {unique_modules}')
 # endregion
 # region ### Get module profiles from NetBox
 url = f'{netboxbaseurl}dcim/module-type-profiles/'
@@ -494,7 +495,7 @@ for i in modules['modules']:
         importCounter += 1
         taskendtime = datetime.datetime.now()
         taskduration.append((taskendtime - taskstarttime).total_seconds())
-        print(f'Import progress: [{'█' * int(importCounter/len(ipf_modules)*100):100}]{importCounter/len(ipf_modules)*100:.2f}% Complete - ({importCounter}/{len(ipf_modules)}) module types imported. Remaining: {sum(taskduration) / len(taskduration) * (len(ipf_modules) - importCounter):.2f}s', end="\r")
+        print(f'Import progress: [{'█' * int(importCounter/len(unique_modules)*100):100}]{importCounter/len(unique_modules)*100:.2f}% Complete - ({importCounter}/{len(unique_modules)}) module types imported. Remaining: {sum(taskduration) / len(taskduration) * (len(unique_modules) - importCounter):.2f}s', end="\r")
 print(f'Netbox module import complete.')
 # endregion
 # endregion
