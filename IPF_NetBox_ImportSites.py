@@ -47,7 +47,6 @@ for site in ipf_sites:
     }
     r = requests.post(url,headers=netboxheaders,json=payload,verify=False)
     if r.status_code == 201:
-        print(f'Successfully imported site {site_name} into NetBox.')
         siteSuccessCount += 1
     else:
         siteFailCount += 1

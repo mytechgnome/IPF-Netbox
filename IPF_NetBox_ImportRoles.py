@@ -71,7 +71,6 @@ for role in devType:
     }
     r = requests.post(url,headers=netboxheaders,json=payload,verify=False)
     if r.status_code == 201:
-        print(f'Successfully imported Device Role {role_name} into NetBox.')
         roleSuccessCount += 1
     else:
         print(f'Failed to import Device Role {role_name} into NetBox. Status Code: {r.status_code}, Response: {r.text}')

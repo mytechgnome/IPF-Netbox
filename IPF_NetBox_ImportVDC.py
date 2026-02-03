@@ -1,0 +1,63 @@
+'''
+Script to import VDCs from IP Fabric into NetBox.
+
+Created by: Dan Kelcher
+Date: February 3, 2026
+'''
+
+# region # Imports and setup
+import IPFloader 
+import NetBoxloader
+from IPFexporter import export_ipf_data
+from NetBoxexporter import export_netbox_data
+import requests
+
+# region ## Load IP Fabric configuration
+ipfbaseurl, ipftoken, ipfheaders, ipflimit = IPFloader.load_ipf_config()
+# endregion
+# region ## Load NetBox configuration
+netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = NetBoxloader.load_netbox_config()
+# endregion
+# endregion
+
+# region # Export VDCs from IP Fabric
+ipf_vdcs = export_ipf_data('platforms/devices', ['hostname', 'contextName', 'contextId'])
+# endregion
+
+# region # Transform data
+# region ## Get existing devices from NetBox to build a lookup table
+netbox_devices = []
+netbox_devices = export_netbox_data('dcim/devices')
+# endregion
+# region ## Build Device Lookup Dictionary
+for vdc in ipf_vdcs:
+    for device in netbox_devices:
+        if device['name'].lower() == vdc['hostname'].lower():
+            vdc['device_id'] = device['id']
+            vdc['vdc_name'] = vdc['contextName']
+            vdc['vdc_id'] = vdc['contextId']
+            break
+# endregion
+# endregion
+# region # Load VDCs into NetBox
+import_counter = 0
+import_success_count = 0
+import_fail_count = 0
+for vdc in ipf_vdcs:
+    url = f'{netboxbaseurl}dcim/virtual-device-contexts/'
+    payload = {
+        'device': vdc['device_id'],
+        'name': vdc['vdc_name'],
+        'identifier': vdc['vdc_id'],
+        'status': 'active',
+        'comments': f'Imported from IP Fabric.'
+    }
+    r = requests.post(url,headers=netboxheaders,json=payload,verify=False)
+    if r.status_code == 201:
+        import_success_count += 1
+    else:
+        import_fail_count += 1
+        print(f'Failed to import VDC {vdc["vdc_name"]} on device {vdc["hostname"]} into NetBox. Status Code: {r.status_code}, Response: {r.text}')
+    import_counter += 1
+    print(f'Import progress: [[{"█" * int(import_counter/len(ipf_vdcs)*100):100}]{import_counter/len(ipf_vdcs)*100:.2f}% Complete - ({import_counter}/{len(ipf_vdcs)}) VDCs imported.', end="\r")
+# endregion
