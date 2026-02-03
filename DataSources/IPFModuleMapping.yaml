@@ -70,7 +70,7 @@ categories:
       - ipf: 'Slot 33'
         netbox_candidates: ['PS-33','PSU33','Power Supply 33']
 
-  network_module:
+  network:
     keywords: [uplink, network module, nm, fabric card, fab, fru]
     ipf_patterns:
       # IPF often: "Switch N FRU Uplink Module X" or "Switch N Uplink Module X"

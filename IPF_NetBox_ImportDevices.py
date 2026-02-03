@@ -372,7 +372,7 @@ for device in transform_list:
     taskduration.append((taskendtime - taskstarttime).total_seconds())
     remaining = sum(taskduration) / len(taskduration) * (len(transform_list) - deviceimportcounter)
     print(f'Import progress: [{'█' * int(deviceimportcounter/len(transform_list)*100):100}]{deviceimportcounter/len(transform_list)*100:.2f}% Complete - ({deviceimportcounter}/{len(transform_list)}) devices imported. Remaining: {remaining:.2f}s',end="\r")
-print(f'Device import process completed. Total Success: {deviceSuccessCount}, Updated: {deviceUpdateCount}, Failed: {deviceFailCount}')
+print(f'\nDevice import process completed. Total Success: {deviceSuccessCount}, Updated: {deviceUpdateCount}, Failed: {deviceFailCount}')
 # endregion
 # endregion
 # region ## Update VC masters with member IDs
@@ -388,7 +388,7 @@ for i in vc_masters:
     if r.status_code != 200:
         print(f'Failed to update VC {vc} with master device ID {master}. Response: {r.text}')
     print(f'Update progress: {vc_masters.index(i)/len(vc_masters)*100:.2f}% Complete - ({vc_masters.index(i)}/{len(vc_masters)}) VC masters updated.', end="\r")
-print(f'Virtual Chassis master update process completed.')
+print(f'\nVirtual Chassis master update process completed.')
 # endregion
 
 # region ## Update interface naming for VC members
@@ -410,6 +410,8 @@ def update_vc_members(update_type, device_id, member_number):
                 'name': new_name,
                 'display': new_name
             }
+            if update_type == 'module-bays':
+                payload['position'] = new_name
             r = requests.patch(url,headers=netboxheaders,json=payload,verify=False)
             if r.status_code != 200:
                 Errors.append(f'{device_id}: {r.text}, {payload}, {object}')
@@ -426,8 +428,9 @@ for member in vc_members:
     taskstarttime = datetime.datetime.now()
     device_id = int(member[0])
     member_number = int(member[1])
-    if member_number == 1:
-        continue  # Skip master member
+    if member_number == 1:  # Skip master member
+        vc_updates += 1
+        continue
     update_count, fail_count, errors = update_vc_members('interfaces', device_id, member_number)
     interfaceUpdateCount += update_count
     interfaceFailCount += fail_count
@@ -441,7 +444,7 @@ for member in vc_members:
     taskduration.append((taskendtime - taskstarttime).total_seconds())
     remaining = sum(taskduration) / len(taskduration) * (len(vc_members) - vc_updates)
     print(f'Update status: [{'█' * int(vc_updates/len(vc_members)*100):100}] {vc_updates/len(vc_members)*100:.2f}% Complete - ({vc_updates}/{len(vc_members)}) members updated. Remaining: {remaining:.2f}s', end="\r")
-print(f'Virtual Chassis member interface and module name update process completed.')
+print(f'\nVirtual Chassis member interface and module name update process completed.')
 print(f'Total interfaces updated: {interfaceUpdateCount}, failed: {interfaceFailCount}')
 print(f'Total modules updated: {moduleUpdateCount}, failed: {moduleFailCount}')
 # endregion

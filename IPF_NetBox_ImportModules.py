@@ -432,7 +432,7 @@ for i in module_buckets.keys():
 print(f'Total modules to create across all types: {total_modules_to_create}')
 print(f'Total modules with errors across all types: {total_modules_with_errors}')
 # endregion
-
+# endregion
 '''
 NOTE Non-SPF modules imported first because modules may have SFPs installed in them.
 '''
@@ -445,12 +445,12 @@ Meaning that devices with SFP slots could have an SFP interface created, and the
 Need to test if the interface configuration is preserved in this case (eg. description, enabled/disabled state, etc.)
 '''
 
-# region ## Load modules into NetBox
+# region # Load modules into NetBox
 
 for i in module_buckets.keys():
     modules_to_create = eval(f'{i}_modules_to_create')
     print(f'Creating {len(modules_to_create)} {i} modules in NetBox...')
-    duration = []
+    taskduration = []
     importCounter = 0
     for module in modules_to_create:
         taskstart = datetime.datetime.now()
@@ -471,12 +471,14 @@ for i in module_buckets.keys():
                 f.write(error_text + '\n')
         importCounter += 1
         taskend = datetime.datetime.now()
-        taskduration = taskend - taskstart
-        duration.append(taskduration)
-        print(f'Import progress: [[{"█" * int(importCounter/len(modules_to_create)*100):100}]{importCounter/len(modules_to_create)*100:.2f}% Complete - ({importCounter}/{len(modules_to_create)}) modules of type {i} imported. Remaining: {sum(duration) / len(duration) * (len(modules_to_create) - importCounter):.2f}s', end="\r")
+        taskduration.append((taskend - taskstart).total_seconds())
+        remaining = sum(taskduration) / len(taskduration) * (len(modules_to_create) - importCounter)
+        print(f'Import progress: [[{"█" * int(importCounter/len(modules_to_create)*100):100}]{importCounter/len(modules_to_create)*100:.2f}% Complete - ({importCounter}/{len(modules_to_create)}) {i} modules imported. Remaining: {remaining:.2f}s', end="\r")
+    print(f'\n{i} module import process completed.')
 # endregion
+print('All module types import process completed.')
 
-# region ## Summary
+# region # Summary
 endtime = datetime.datetime.now()
 print('Module import complete.')
 print(f'Start time: {starttime}')
