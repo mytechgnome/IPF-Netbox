@@ -316,10 +316,12 @@ moduleErrors = []
 devicesfailed = []
 vc_masters = []
 vc_members = []
+taskduration = []
 # endregion
 # region ## Import devices
 url = f'{netboxbaseurl}dcim/devices/'
 for device in transform_list:
+    taskstarttime = datetime.datetime.now()
     devicename = device['hostname']
     device_type = device['device_type_ID']
     device_role = device['device_role_ID']
@@ -366,10 +368,15 @@ for device in transform_list:
         error_text = f'{devicename}, {r.text}, {payload}, {device}'
         devicesfailed.append(error_text)
     deviceimportcounter += 1
-    print(f'Import progress: {deviceimportcounter/len(transform_list)*100:.2f}% Complete - ({deviceimportcounter}/{len(transform_list)}) devices imported.', end="\r")
+    taskendtime = datetime.datetime.now()
+    taskduration.append((taskendtime - taskstarttime).total_seconds())
+    remaining = sum(taskduration) / len(taskduration) * (len(transform_list) - deviceimportcounter)
+    print(f'Import progress: [{'█' * int(deviceimportcounter/len(transform_list)*100):100}]{deviceimportcounter/len(transform_list)*100:.2f}% Complete - ({deviceimportcounter}/{len(transform_list)}) devices imported. Remaining: {remaining:.2f}s',end="\r")
+print(f'Device import process completed. Total Success: {deviceSuccessCount}, Updated: {deviceUpdateCount}, Failed: {deviceFailCount}')
 # endregion
 # endregion
 # region ## Update VC masters with member IDs
+print(f'Updating Virtual Chassis masters with member IDs.')
 for i in vc_masters:
     vc = int(i[0])
     master = int(i[1])
@@ -380,6 +387,8 @@ for i in vc_masters:
     r = requests.patch(url,headers=netboxheaders,json=payload,verify=False)
     if r.status_code != 200:
         print(f'Failed to update VC {vc} with master device ID {master}. Response: {r.text}')
+    print(f'Update progress: {vc_masters.index(i)/len(vc_masters)*100:.2f}% Complete - ({vc_masters.index(i)}/{len(vc_masters)}) VC masters updated.', end="\r")
+print(f'Virtual Chassis master update process completed.')
 # endregion
 
 # region ## Update interface naming for VC members
@@ -411,7 +420,10 @@ def update_vc_members(update_type, device_id, member_number):
 # endregion
 # region ### Adjust interface and module names for VC members
 vc_updates = 0
+taskduration = []
+print(f'Updating interface and module names for Virtual Chassis members.')
 for member in vc_members:
+    taskstarttime = datetime.datetime.now()
     device_id = int(member[0])
     member_number = int(member[1])
     if member_number == 1:
@@ -425,12 +437,15 @@ for member in vc_members:
     moduleFailCount += fail_count
     moduleErrors.extend(errors)
     vc_updates += 1
-    print(f'Update status: {vc_updates/len(vc_members)*100:.2f}% Complete - ({vc_updates}/{len(vc_members)}) members updated.', end="\r")
+    taskendtime = datetime.datetime.now()
+    taskduration.append((taskendtime - taskstarttime).total_seconds())
+    remaining = sum(taskduration) / len(taskduration) * (len(vc_members) - vc_updates)
+    print(f'Update status: [{'█' * int(vc_updates/len(vc_members)*100):100}] {vc_updates/len(vc_members)*100:.2f}% Complete - ({vc_updates}/{len(vc_members)}) members updated. Remaining: {remaining:.2f}s', end="\r")
+print(f'Virtual Chassis member interface and module name update process completed.')
 print(f'Total interfaces updated: {interfaceUpdateCount}, failed: {interfaceFailCount}')
 print(f'Total modules updated: {moduleUpdateCount}, failed: {moduleFailCount}')
 # endregion
 # endregion
-
 # endregion
 '''
 Need to test linecard and uplink module updates as well. They should work as the line cards and uplinks are part of the device's module bays, while VC members are unique devices in NetBox.

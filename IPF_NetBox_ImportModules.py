@@ -445,13 +445,15 @@ Meaning that devices with SFP slots could have an SFP interface created, and the
 Need to test if the interface configuration is preserved in this case (eg. description, enabled/disabled state, etc.)
 '''
 
-pause = input('Press Enter to continue with module creation in NetBox, or Ctrl-C to abort...')
-
 # region ## Load modules into NetBox
+
 for i in module_buckets.keys():
     modules_to_create = eval(f'{i}_modules_to_create')
     print(f'Creating {len(modules_to_create)} {i} modules in NetBox...')
+    duration = []
+    importCounter = 0
     for module in modules_to_create:
+        taskstart = datetime.datetime.now()
         url = f'{netboxbaseurl}dcim/modules/'
         payload = {
             "device": module["device_id"],
@@ -463,13 +465,15 @@ for i in module_buckets.keys():
             "comments": f'Imported from IP Fabric.'
         }
         r = requests.post(url, headers=netboxheaders, json=payload, verify=False)
-        if r.status_code == 201:
-            print(f'Successfully created module {module["name"]} on device {module["hostname"]}.')
-        else:
-            print(f'Failed to create module {module["name"]} on device {module["hostname"]}. Status code: {r.status_code}, Response: {r.text}')
+        if r.status_code != 201:
             error_text = f'{module["hostname"]},{module["name"]},{module["pid"]},{module["sn"]},{module["dscr"]},{module["module_type_id"]},{module["device_id"]},{module["module_bay_id"]},{i}'
             with open(os.path.join(log_dir, f'error_{i}_modules_import.csv'), 'a') as f:
                 f.write(error_text + '\n')
+        importCounter += 1
+        taskend = datetime.datetime.now()
+        taskduration = taskend - taskstart
+        duration.append(taskduration)
+        print(f'Import progress: [[{"█" * int(importCounter/len(modules_to_create)*100):100}]{importCounter/len(modules_to_create)*100:.2f}% Complete - ({importCounter}/{len(modules_to_create)}) modules of type {i} imported. Remaining: {sum(duration) / len(duration) * (len(modules_to_create) - importCounter):.2f}s', end="\r")
 # endregion
 
 # region ## Summary

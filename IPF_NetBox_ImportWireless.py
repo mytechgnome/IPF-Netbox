@@ -14,9 +14,9 @@ import IPFloader
 import IPFexporter
 import NetBoxloader
 import requests
-import datetime
+import time
 
-starttime = datetime.datetime.now()
+starttime = time.time()
 
 # region ## Load IP Fabric configuration
 ipfbaseurl, ipftoken, ipfheaders, ipflimit = IPFloader.load_ipf_config()
@@ -58,7 +58,7 @@ print('SSID import process completed.')
 print(f'Total SSIDs processed: {len(ipf_ssids)}')
 print(f'Total SSIDs successfully imported: {ssidSuccessCount}')
 print(f'Total SSIDs failed to import: {ssidFailCount}')
-endtime = datetime.datetime.now()
+endtime = time.time()
 duration = endtime - starttime
 print(f'SSID import process completed. Start time: {starttime}, End time: {endtime}, Duration: {duration}')
 # endregion
