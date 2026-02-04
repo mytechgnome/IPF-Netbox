@@ -321,7 +321,7 @@ taskduration = []
 # region ## Import devices
 url = f'{netboxbaseurl}dcim/devices/'
 for device in transform_list:
-    taskstarttime = datetime.datetime.now()
+    taskstart = datetime.datetime.now()
     devicename = device['hostname']
     device_type = device['device_type_ID']
     device_role = device['device_role_ID']
@@ -368,10 +368,10 @@ for device in transform_list:
         error_text = f'{devicename}, {r.text}, {payload}, {device}'
         devicesfailed.append(error_text)
     deviceimportcounter += 1
-    taskendtime = datetime.datetime.now()
-    taskduration.append((taskendtime - taskstarttime).total_seconds())
+    taskend = datetime.datetime.now()
+    taskduration.append((taskend - taskstart).total_seconds())
     remaining = sum(taskduration) / len(taskduration) * (len(transform_list) - deviceimportcounter)
-    print(f'Import progress: [{'█' * int(deviceimportcounter/len(transform_list)*100):100}]{deviceimportcounter/len(transform_list)*100:.2f}% Complete - ({deviceimportcounter}/{len(transform_list)}) devices imported. Remaining: {remaining:.2f}s',end="\r")
+    print(f'Import progress: [[{"█" * int(deviceimportcounter/len(transform_list)*100):100}]{deviceimportcounter/len(transform_list)*100:.2f}% Complete - ({deviceimportcounter}/{len(transform_list)}) devices imported. Remaining: {remaining:.2f}s', end="\r")
 print(f'\nDevice import process completed. Total Success: {deviceSuccessCount}, Updated: {deviceUpdateCount}, Failed: {deviceFailCount}')
 # endregion
 # endregion
@@ -425,7 +425,7 @@ vc_updates = 0
 taskduration = []
 print(f'Updating interface and module names for Virtual Chassis members.')
 for member in vc_members:
-    taskstarttime = datetime.datetime.now()
+    taskstart = datetime.datetime.now()
     device_id = int(member[0])
     member_number = int(member[1])
     if member_number == 1:  # Skip master member
@@ -440,10 +440,10 @@ for member in vc_members:
     moduleFailCount += fail_count
     moduleErrors.extend(errors)
     vc_updates += 1
-    taskendtime = datetime.datetime.now()
-    taskduration.append((taskendtime - taskstarttime).total_seconds())
+    taskend = datetime.datetime.now()
+    taskduration.append((taskend - taskstart).total_seconds())
     remaining = sum(taskduration) / len(taskduration) * (len(vc_members) - vc_updates)
-    print(f'Update status: [{'█' * int(vc_updates/len(vc_members)*100):100}] {vc_updates/len(vc_members)*100:.2f}% Complete - ({vc_updates}/{len(vc_members)}) members updated. Remaining: {remaining:.2f}s', end="\r")
+    print(f'Import progress: [[{"█" * int(vc_updates/len(vc_members)*100):100}]{vc_updates/len(vc_members)*100:.2f}% Complete - ({vc_updates}/{len(vc_members)}) Virtual Chassis members updated. Remaining: {remaining:.2f}s', end="\r")
 print(f'\nVirtual Chassis member interface and module name update process completed.')
 print(f'Total interfaces updated: {interfaceUpdateCount}, failed: {interfaceFailCount}')
 print(f'Total modules updated: {moduleUpdateCount}, failed: {moduleFailCount}')

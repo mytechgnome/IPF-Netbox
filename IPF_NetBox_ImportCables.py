@@ -132,7 +132,7 @@ for row in ipf_connections_df.itertuples(index=False):
     ]
        
     if l_matches.empty:
-        print(f"[Missing] NetBox interface not found for local '{l_host} {l_int}'")
+        #print(f"[Missing] NetBox interface not found for local '{l_host} {l_int}'")
         l_id = None
         l_type = None
         continue  # Skip cable creation if local interface not found
@@ -146,7 +146,7 @@ for row in ipf_connections_df.itertuples(index=False):
         (_netbox["__norm_interface"] == r_int_norm)
     ]
     if r_matches.empty:
-        print(f"[Missing] NetBox interface not found for remote '{r_host} {r_int}'")
+        #print(f"[Missing] NetBox interface not found for remote '{r_host} {r_int}'")
         r_id = None
         r_type = None
         continue  # Skip cable creation if remote interface not found
@@ -156,8 +156,8 @@ for row in ipf_connections_df.itertuples(index=False):
 # endregion   
 # region #### Type mismatch notice
     type_match = (l_type == r_type) if (l_type and r_type) else None
-    if type_match is False:
-        print(f"[Mismatch] Local '{l_host} {l_int}' type '{l_type}' != Remote '{r_host} {r_int}' type '{r_type}'")
+    #if type_match is False:
+        #print(f"[Mismatch] Local '{l_host} {l_int}' type '{l_type}' != Remote '{r_host} {r_int}' type '{r_type}'")
 # endregion
 # region #### Determine cable type and color from cable map
     cable = None
@@ -165,7 +165,7 @@ for row in ipf_connections_df.itertuples(index=False):
     if l_type:
         c_matches = _cable_map[_cable_map["__norm_type"] == l_type]
         if c_matches.empty:
-            print(f"[Missing] Cable map not found for interface type '{l_type}' (local '{l_host} {l_int}')")
+            #print(f"[Missing] Cable map not found for interface type '{l_type}' (local '{l_host} {l_int}')")
             continue
         else:
             cable = c_matches.iloc[0]["Cable"]
@@ -217,10 +217,9 @@ for i in cabledata:
         cable_payload['color'] = i['color'].lower()
     cable_payload_json = json.dumps(cable_payload)
     r = requests.post(url,headers=netboxheaders,data=cable_payload_json,verify=False)
-    if r.status_code == 201:
-        print(f'Created cable between {i["localHost"]} ({i["localInt"]}) and {i["remoteHost"]} ({i["remoteInt"]}) successfully.')
-    else:
-        print(f'Failed to create cable between {i["localHost"]} and {i["remoteHost"]}. Status code: {r.status_code}')
+    if r.status_code != 201:
+        #print(f'Failed to create cable between {i["localHost"]} and {i["remoteHost"]}. Status code: {r.status_code}')
+        continue
 # endregion
 endtime = datetime.datetime.now()
 duration = endtime - starttime

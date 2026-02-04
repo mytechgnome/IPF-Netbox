@@ -284,7 +284,7 @@ print(f'Importing device types into NetBox...')
 importCounter = 0
 taskduration = []
 for i in ipf_models:
-    taskstarttime = datetime.datetime.now()
+    taskstart = datetime.datetime.now()
     objecttype = 'device'
     vendor = i['vendor']
     manufacturerID = netbox_vendors.get(vendor.lower(), None)
@@ -382,10 +382,10 @@ for i in ipf_models:
             if r.text.find('already exists') != -1:
                 duplicate += 1
         importCounter += 1
-        taskendtime = datetime.datetime.now()
-        taskduration.append((taskendtime - taskstarttime).total_seconds())
+        taskend = datetime.datetime.now()
+        taskduration.append((taskend - taskstart).total_seconds())
         remaining = sum(taskduration) / len(taskduration) * (len(ipf_models) - importCounter)
-        print(f'Import progress: [{'█' * int(importCounter/len(ipf_models)*100):100}] {importCounter/len(ipf_models)*100:.2f}% Complete - ({importCounter}/{len(ipf_models)}) device types imported. Remaining: {remaining:.2f}s', end="\r")
+        print(f'Import progress: [{"█" * int(importCounter/len(ipf_models)*100):100}] {importCounter/len(ipf_models)*100:.2f}% Complete - ({importCounter}/{len(ipf_models)}) device types imported. Remaining: {remaining:.2f}s', end="\r")
 # endregion
 # endregion
 # endregion
@@ -429,8 +429,6 @@ for profile in r.json()['results']:
 # endregion
 # region ## Prepare module data for import
 print('Importing modules into NetBox...')
-importCounter = 0
-taskduration = []
 for i in modules['modules']:
     vendor = i
     lowermanufacturernames = [manufacturer.lower() for manufacturer in manufacturers]
@@ -450,8 +448,10 @@ for i in modules['modules']:
     manufacturerID = netbox_vendors.get(vendor.lower(), None)
 # endregion
 # region ### Find Module Type YAML in Device Type Library and prepare for import
+    importCounter = 0
+    taskduration = []
     for module in modules['modules'][i]:
-        taskstarttime = datetime.datetime.now()
+        taskstart = datetime.datetime.now()
         moduletypelibrary = get_close_matches(module.lower(),basemodulenames, n=1 , cutoff=modulenamesensitivity)
         if moduletypelibrary:
             score = SequenceMatcher(None, module.lower(), moduletypelibrary[0]).ratio()
@@ -493,14 +493,14 @@ for i in modules['modules']:
             error_text = f'{vendorlibrary},{module}'
             errors_matchmodule.append(error_text)
         importCounter += 1
-        taskendtime = datetime.datetime.now()
-        taskduration.append((taskendtime - taskstarttime).total_seconds())
-        print(f'Import progress: [{'█' * int(importCounter/len(unique_modules)*100):100}]{importCounter/len(unique_modules)*100:.2f}% Complete - ({importCounter}/{len(unique_modules)}) module types imported. Remaining: {sum(taskduration) / len(taskduration) * (len(unique_modules) - importCounter):.2f}s', end="\r")
+        taskend = datetime.datetime.now()
+        taskduration.append((taskend - taskstart).total_seconds())
+        remaining = sum(taskduration) / len(taskduration) * (len(modules['modules'][i]) - importCounter)
+        print(f'Import progress: [[{"█" * int(importCounter/len(modules["modules"][i])*100):100}]{importCounter/len(modules["modules"][i])*100:.2f}% Complete - ({importCounter}/{len(modules["modules"][i])}) {i} modules imported. Remaining: {remaining:.2f}s', end="\r")
 print(f'Netbox module import complete.')
 # endregion
 # endregion
 # region # Output logs and summaries
-
 with open(os.path.join(log_dir, 'DeviceTypeImport_Errors_MatchDevice.csv'), 'w') as f:
     for item in errors_matchdevice:
         f.write("%s\n" % item)

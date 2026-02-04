@@ -68,9 +68,12 @@ for vc in existing_vc.keys():
 
 # region # Load Virtual Chassis into NetBox
 url = f'{netboxbaseurl}dcim/virtual-chassis/'
+importCounter = 0
+taskduration = []
 vcSuccessCount = 0
 vcFailCount = 0
 for vc in vc_add:
+    taskstart = datetime.datetime.now()
     vc_master = vc
     payload = {
         'name': vc_master,
@@ -82,6 +85,12 @@ for vc in vc_add:
         vcSuccessCount += 1
     else:
         vcFailCount += 1
+    importCounter += 1
+    taskend = datetime.datetime.now()
+    taskduration.append((taskend - taskstart).total_seconds())
+    remaining = sum(taskduration) / len(taskduration) * (len(vc_add) - importCounter)
+    print(f'Import progress: [{"█" * int(importCounter/len(vc_add)*100):100}] {importCounter/len(vc_add)*100:.2f}% Complete - ({importCounter}/{len(vc_add)}) virtual chassis imported. Remaining: {remaining:.2f}s', end="\r")
+
 # endregion
 # region ## Flag VCs no longer in IP Fabric
 for vc in vc_decom:
