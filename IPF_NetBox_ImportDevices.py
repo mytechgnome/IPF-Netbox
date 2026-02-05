@@ -418,6 +418,11 @@ def update_vc_members(update_type, device_id, member_number):
                 FailCount += 1
             else:
                 UpdateCount += 1
+            if r.status_code != 200:
+                Errors.append(f'{device_id}: {r.text}, {payload}, {object}')
+                FailCount += 1
+            else:
+                UpdateCount += 1
     return UpdateCount, FailCount, Errors
 # endregion
 # region ### Adjust interface and module names for VC members
