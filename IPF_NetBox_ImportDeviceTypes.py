@@ -386,7 +386,7 @@ for i in ipf_models:
         taskduration.append((taskend - taskstart).total_seconds())
         remaining = sum(taskduration) / len(taskduration) * (len(ipf_models) - importCounter)
         print(f'Import progress: [{"█" * int(importCounter/len(ipf_models)*100):100}] {importCounter/len(ipf_models)*100:.2f}% Complete - ({importCounter}/{len(ipf_models)}) device types imported. Remaining: {remaining:.2f}s', end="\r")
-    print('\n')
+print('\n')
 # endregion
 # endregion
 # endregion
