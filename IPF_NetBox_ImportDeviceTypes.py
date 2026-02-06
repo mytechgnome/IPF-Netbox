@@ -386,6 +386,7 @@ for i in ipf_models:
         taskduration.append((taskend - taskstart).total_seconds())
         remaining = sum(taskduration) / len(taskduration) * (len(ipf_models) - importCounter)
         print(f'Import progress: [{"█" * int(importCounter/len(ipf_models)*100):100}] {importCounter/len(ipf_models)*100:.2f}% Complete - ({importCounter}/{len(ipf_models)}) device types imported. Remaining: {remaining:.2f}s', end="\r")
+    print('\n')
 # endregion
 # endregion
 # endregion
@@ -398,7 +399,7 @@ print(f'Netbox device import complete. {duplicate} duplicates skipped, {nomatch}
 # region # Import IP Fabric Modules to NetBox
 # region ## Export list of modules from IP Fabric
 print('Getting modules from IP Fabric...')
-ipf_modules = IPFexporter.export_ipf_data('inventory/pn', ['pid', 'vendor', 'deviceSn', 'dscr', 'pid', 'sn'])
+ipf_modules = IPFexporter.export_ipf_data('inventory/pn', ['pid', 'vendor', 'deviceSn', 'dscr', 'pid', 'sn', 'model'])
 print(f'Total modules fetched from IP Fabric: {len(ipf_modules)}')
 # endregion
 # region ## Transform module data
