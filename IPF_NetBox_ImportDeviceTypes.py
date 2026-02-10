@@ -426,6 +426,15 @@ for vendor, group in df.groupby('vendor'):
 unique_modules = sum(len(m) for m in modules["modules"].values())
 print(f'Total unique modules from IP Fabric: {unique_modules}')
 # endregion
+# region ### Filter out modules that exist in Device Type Library as components - these will be imported as part of the device type import process
+filtered_modules={"modules": {}}
+for vendor in modules['modules']:
+    device_files = os.listdir(os.path.join(repodir, 'device-types', vendor))
+    device_list= [os.path.splitext(device)[0] for device in device_files]
+    for module in modules['modules'][vendor]:
+        if module not in device_list:
+            filtered_modules["modules"].setdefault(vendor, set()).add(module)
+# endregion
 # region ### Get module profiles from NetBox
 url = f'{netboxbaseurl}dcim/module-type-profiles/'
 r = requests.get(url=url,headers=netboxheaders,verify=False)
