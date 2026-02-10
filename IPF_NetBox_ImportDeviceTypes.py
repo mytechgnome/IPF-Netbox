@@ -434,6 +434,7 @@ for vendor in modules['modules']:
     for module in modules['modules'][vendor]:
         if module not in device_list:
             filtered_modules["modules"].setdefault(vendor, set()).add(module)
+modules = filtered_modules
 # endregion
 # region ### Get module profiles from NetBox
 url = f'{netboxbaseurl}dcim/module-type-profiles/'
