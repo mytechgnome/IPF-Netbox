@@ -151,6 +151,7 @@ for device in ipf_devices:
     device['member']         = None
     device['vc_role']        = None
     device['vc_state']       = None
+    device['vc_type']        = None
     device['vc_ver']         = None
     device['vc_image']       = None
     device['vc_hwver']       = None
@@ -187,6 +188,7 @@ for device in ipf_vssmembers:
         vc_device['master'] = device['hostname']
         vc_device['member'] = device['chassisId']
         vc_device['vc_role'] = device['state']
+        vc_device['vc_type'] = 'vss'
 # endregion
 # region #### Create new device entry for non-master members
     elif vc_device != None:
@@ -200,6 +202,7 @@ for device in ipf_vssmembers:
         new_device['model']    = pn
         new_device['sn']       = device['sn']
         new_device['vc_role']  = device['state']
+        new_device['vc_type'] = 'vss'
         new_devices.append(new_device)
 # endregion
 # endregion
@@ -216,6 +219,7 @@ for device in ipf_stackmembers:
         vc_device['master']  = device['master']
         vc_device['member']  = device['member']
         vc_device['vc_role'] = device['role']
+        vc_device['vc_type'] = 'stack'
  # endregion
 # region #### Create new device entry for non-master members
     elif vc_device:
@@ -224,16 +228,17 @@ for device in ipf_stackmembers:
         new_device['model']    = device['pn']
         new_device['sn']       = device['memberSn']
         new_device['vc_role']  = device['role']
+        vc_device['vc_type'] = 'stack'
         new_devices.append(new_device)
-# endregion
-# region #### Append member number to hostname for VC members
-for i in new_devices:
-    if i['member'] != '1':
-        i['hostname'] = f"{i['hostname']}/{i['member']}"
 # endregion
 # region #### Add new VC member devices to transform list
 print(f'Adding {len(new_devices)} virtual chassis member devices to transform list.')
 transform_list.extend(new_devices)
+# endregion
+# region #### Append member number to hostname for VC members
+for i in transform_list:
+    if i['member'] != '1':
+        i['hostname'] = f"{i['hostname']}/{i['member']}"
 # endregion
 # endregion
 print(f'Processed {len(transform_list)} devices.')
