@@ -53,7 +53,7 @@ netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = NetBoxloader.load_netbo
 # endregion
 
 # region # Export connectivity matrix from IP Fabric
-ipf_connections = IPFexporter.export_ipf_data('interfaces/connectivity-matrix', ['siteName', 'localHost', 'localInt', 'localMedia', 'remoteHost', 'remoteInt', 'remoteMedia'])
+ipf_connections = IPFexporter.export_ipf_data('interfaces/connectivity-matrix', ['siteName', 'localHost', 'localInt', 'localMedia', 'remoteHost', 'remoteInt', 'remoteMedia', 'protocol'], filters={"protocol": ['like', 'cdp']})
 print(f'Total cables fetched from IP Fabric: {len(ipf_connections)}')
 # endregion
 
@@ -189,11 +189,16 @@ for row in ipf_connections_df.itertuples(index=False):
 # endregion
 # endregion
 # endregion
+print(f'Total cables matched with NetBox interfaces and cable types: {len(cabledata)}')
 # endregion
 
 # region # Load cables into NetBox
+print(f'Importing cables into NetBox...')
 url = f'{netboxbaseurl}dcim/cables/'
+taskduration = []
+cables_updated = 0
 for i in cabledata:
+    taskstart = datetime.datetime.now()
     cable_payload = {
         "type": i["cable"],
         "a_terminations": [
@@ -220,6 +225,12 @@ for i in cabledata:
     if r.status_code != 201:
         #print(f'Failed to create cable between {i["localHost"]} and {i["remoteHost"]}. Status code: {r.status_code}')
         continue
+    cables_updated += 1
+    taskend = datetime.datetime.now()
+    taskduration.append((taskend - taskstart).total_seconds())
+    remaining = sum(taskduration) / len(taskduration) * (len(cabledata) - cables_updated)
+    print(f'Import progress: [{"█" * int(cables_updated/len(cabledata)*100):100}]{cables_updated/len(cabledata)*100:.2f}% Complete - ({cables_updated}/{len(cabledata)}) Cables imported. Remaining: {remaining:.2f}s', end="\r")
+print(f'\nCable import process completed.')
 # endregion
 endtime = datetime.datetime.now()
 duration = endtime - starttime

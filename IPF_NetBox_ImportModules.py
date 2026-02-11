@@ -473,7 +473,7 @@ for i in module_buckets.keys():
         taskend = datetime.datetime.now()
         taskduration.append((taskend - taskstart).total_seconds())
         remaining = sum(taskduration) / len(taskduration) * (len(modules_to_create) - importCounter)
-        print(f'Import progress: [[{"█" * int(importCounter/len(modules_to_create)*100):100}]{importCounter/len(modules_to_create)*100:.2f}% Complete - ({importCounter}/{len(modules_to_create)}) {i} modules imported. Remaining: {remaining:.2f}s', end="\r")
+        print(f'Import progress: [{"█" * int(importCounter/len(modules_to_create)*100):100}]{importCounter/len(modules_to_create)*100:.2f}% Complete - ({importCounter}/{len(modules_to_create)}) {i} modules imported. Remaining: {remaining:.2f}s', end="\r")
     print(f'\n{i} module import process completed.')
 # endregion
 print('All module types import process completed.')

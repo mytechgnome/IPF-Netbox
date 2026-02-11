@@ -517,7 +517,7 @@ for i in modules['modules']:
         taskend = datetime.datetime.now()
         taskduration.append((taskend - taskstart).total_seconds())
         remaining = sum(taskduration) / len(taskduration) * (len(modules['modules'][i]) - importCounter)
-        print(f'Import progress: [[{"█" * int(importCounter/len(modules["modules"][i])*100):100}]{importCounter/len(modules["modules"][i])*100:.2f}% Complete - ({importCounter}/{len(modules["modules"][i])}) {i} modules imported. Remaining: {remaining:.2f}s', end="\r")
+        print(f'Import progress: [{"█" * int(importCounter/len(modules["modules"][i])*100):100}]{importCounter/len(modules["modules"][i])*100:.2f}% Complete - ({importCounter}/{len(modules["modules"][i])}) {i} modules imported. Remaining: {remaining:.2f}s', end="\r")
     print('\n')
 print(f'Netbox module import complete.')
 # endregion
