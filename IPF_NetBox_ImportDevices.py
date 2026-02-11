@@ -313,17 +313,17 @@ taskduration = []
 url = f'{netboxbaseurl}dcim/devices/'
 for device in transform_list:
     taskstart = datetime.datetime.now()
-    devicename = device['hostname']
-    device_type = device['device_type_ID']
-    device_role = device['device_role_ID']
-    platform = device['platform_ID']
-    sn = device['sn']
-    site = device['site_ID']
-    status = device['vc_role']
-    virtual_chassis = device['vc_ID'] if device['vc_ID'] else None
-    vc_position = device['member']
-    description = f'Imported from IP Fabric'
-    comments = f'Updated on {starttime.strftime("%Y-%m-%d %H:%M:%S")}'
+    devicename       = device['hostname']
+    device_type      = device['device_type_ID']
+    device_role      = device['device_role_ID']
+    platform         = device['platform_ID']
+    sn               = device['sn']
+    site             = device['site_ID']
+    status           = 'active'
+    virtual_chassis  = device['vc_ID'] if device['vc_ID'] else None
+    vc_position      = device['member']
+    description      = f'Imported from IP Fabric'
+    comments         = f'Updated on {starttime.strftime("%Y-%m-%d %H:%M:%S")}'
     payload = {
         'name': devicename,
         'device_type': device_type,
