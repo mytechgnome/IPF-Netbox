@@ -176,9 +176,10 @@ for device in ipf_devices:
 # region ### Add data to VSS members
 new_devices = []
 for device in ipf_vssmembers:
-# region #### Find device in Transform List
+    vc_device = None
+# region #### Find master device in Transform List
     for i in transform_list:
-        if i['sn'] == device['chassisSn']:
+        if i['hostname'] == device['hostname']:
             vc_device = i
             break
 # region #### Append VSS info if SN matches chassisSn - this is the master member
@@ -188,7 +189,7 @@ for device in ipf_vssmembers:
         vc_device['vc_role'] = device['state']
 # endregion
 # region #### Create new device entry for non-master members
-    else:
+    elif vc_device != None:
         for p in ipf_pns:
             if p['sn'] == device['sn']:
                 if p['pid'] != "":
@@ -204,9 +205,10 @@ for device in ipf_vssmembers:
 # endregion
 # region ### Add data to stack members
 for device in ipf_stackmembers:
+    vc_device = None
 # region #### Find device in Transform List by hostname
     for i in transform_list:
-        if i['snHw'] == device['memberSn']:
+        if i['snHw'] == device['sn']:
             vc_device = i
             break
 # region #### Append data if SN matches memberSn - this is the master member
@@ -216,7 +218,7 @@ for device in ipf_stackmembers:
         vc_device['vc_role'] = device['role']
  # endregion
 # region #### Create new device entry for non-master members
-    else:
+    elif vc_device:
         new_device = vc_device.copy()
         new_device['member']   = device['member']
         new_device['model']    = device['pn']
@@ -230,6 +232,7 @@ for i in new_devices:
         i['hostname'] = f"{i['hostname']}/{i['member']}"
 # endregion
 # region #### Add new VC member devices to transform list
+print(f'Adding {len(new_devices)} virtual chassis member devices to transform list.')
 transform_list.extend(new_devices)
 # endregion
 # endregion
