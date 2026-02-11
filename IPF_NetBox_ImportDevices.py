@@ -173,23 +173,19 @@ for device in ipf_devices:
     transform_list.append(device)
 # endregion
 # region ## Append additional data from IP Fabric
-# region ### Add VSS members to transform_list
+# region ### Add data to VSS members
+new_devices = []
 for device in ipf_vssmembers:
-# region #### Find device in Transform List by hostname
-    hostname = device['hostname']
+# region #### Find device in Transform List
     for i in transform_list:
         if i['sn'] == device['chassisSn']:
             vc_device = i
             break
 # region #### Append VSS info if SN matches chassisSn - this is the master member
-    if device['chassisSn'] == device['sn']:
-        if device['chassisId'] == '1':
-            vc_device['hostname'] = f"{vc_device['hostname']}"
-        else:
-            vc_device['hostname'] = f"{vc_device['hostname']}/{device['chassisId']}"
+    if i['snHw'] == device['chassisSn']:
         vc_device['master'] = device['hostname']
         vc_device['member'] = device['chassisId']
-        vc_device['vc_role'] = 'active' if device['state'] == 'active' else 'standby'
+        vc_device['vc_role'] = device['state']
 # endregion
 # region #### Create new device entry for non-master members
     else:
@@ -199,30 +195,22 @@ for device in ipf_vssmembers:
                     pn = p['pid']
                     break
         new_device = vc_device.copy()
-        if device['chassisId'] == '1':
-            new_device['hostname'] = f"{vc_device['hostname']}"
-        else:
-            new_device['hostname'] = f"{vc_device['hostname']}/{device['chassisId']}"
         new_device['member']   = device['chassisId']
         new_device['model']    = pn
         new_device['sn']       = device['sn']
         new_device['vc_role']  = device['state']
-        transform_list.append(new_device)
+        new_devices.append(new_device)
 # endregion
 # endregion
-# region ### Add stack members to transform_list
+# region ### Add data to stack members
 for device in ipf_stackmembers:
 # region #### Find device in Transform List by hostname
     for i in transform_list:
-        if i['sn'] == device['memberSn']:
+        if i['snHw'] == device['memberSn']:
             vc_device = i
             break
 # region #### Append data if SN matches memberSn - this is the master member
     if device['sn'] == device['memberSn']:
-        if device['member'] == '1':
-            vc_device['hostname'] = f"{vc_device['hostname']}"
-        else:
-            vc_device['hostname'] = f"{vc_device['hostname']}/{device['member']}"
         vc_device['master']  = device['master']
         vc_device['member']  = device['member']
         vc_device['vc_role'] = device['role']
@@ -230,16 +218,19 @@ for device in ipf_stackmembers:
 # region #### Create new device entry for non-master members
     else:
         new_device = vc_device.copy()
-        if device['member'] == '1':
-            new_device['hostname'] = f"{vc_device['hostname']}"
-        else:
-            new_device['hostname'] = f"{vc_device['hostname']}/{device['member']}"
         new_device['member']   = device['member']
         new_device['model']    = device['pn']
         new_device['sn']       = device['memberSn']
         new_device['vc_role']  = device['role']
-        transform_list.append(new_device)
+        new_devices.append(new_device)
 # endregion
+# region #### Append member number to hostname for VC members
+for i in new_devices:
+    if i['member'] != '1':
+        i['hostname'] = f"{i['hostname']}/{i['member']}"
+# endregion
+# region #### Add new VC member devices to transform list
+transform_list.extend(new_devices)
 # endregion
 # endregion
 print(f'Processed {len(transform_list)} devices.')
@@ -328,11 +319,11 @@ for device in transform_list:
     platform = device['platform_ID']
     sn = device['sn']
     site = device['site_ID']
-    status = 'active'
+    status = device['vc_role']
     virtual_chassis = device['vc_ID'] if device['vc_ID'] else None
     vc_position = device['member']
     description = f'Imported from IP Fabric'
-    comments = f'Role: {device["vc_role"]}, HW Ver: {device["vc_hwver"]}, Image: {device["vc_image"]}, Ver: {device["vc_ver"]}, Updated on {starttime.strftime("%Y-%m-%d %H:%M:%S")}'
+    comments = f'Updated on {starttime.strftime("%Y-%m-%d %H:%M:%S")}'
     payload = {
         'name': devicename,
         'device_type': device_type,
