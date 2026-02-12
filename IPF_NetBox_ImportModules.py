@@ -480,6 +480,88 @@ for i in module_buckets.keys():
 # endregion
 print('All module types import process completed.')
 
+
+# region # Update module bay and interface names for VC member modules in NetBox based on IPF data
+print('Starting VC member module interface name update process...')
+interfaceErrors = []
+moduleErrors = []
+interfaceUpdateCount = 0
+moduleUpdateCount = 0
+interfaceFailCount = 0
+moduleFailCount = 0
+vc_members = []
+for i in netbox_devices:
+    if i['name'] and re.search(r'/\d+$', i['name']):
+        vc_members.append((i['id'], re.search(r'/(\d+)$', i['name']).group(1)))
+# region ## Define function to update interface and module names
+def update_vc_members(update_type, device_id, member_number):
+    Errors = []
+    UpdateCount = 0
+    FailCount = 0
+    objects = export_netbox_data(f'dcim/{update_type}', netboxlimit=netboxlimit, filters=[f'device_id={device_id}'])
+    for object in objects:
+        name = object['name']
+        current_name = re.match(r"^(\w*)(\d+)([\/\{\w+\}]{1,})$", name)
+        if current_name:
+            if int(current_name.group(2)) == member_number:
+                continue  # already matches member number, skip update
+            prefix = current_name.group(1)
+            suffix = current_name.group(3)
+            new_name = f'{prefix}{member_number}{suffix}'
+            url = f'{netboxbaseurl}dcim/{update_type}/{object["id"]}/'
+            payload = {
+                'name': new_name,
+                'display': new_name
+            }
+            if update_type == 'module-bays':
+                payload['position'] = new_name
+            r = requests.patch(url,headers=netboxheaders,json=payload,verify=False)
+            if r.status_code != 200:
+                Errors.append(f'{device_id}: {r.text}, {payload}, {object}')
+                FailCount += 1
+            else:
+                UpdateCount += 1
+            if r.status_code != 200:
+                Errors.append(f'{device_id}: {r.text}, {payload}, {object}')
+                FailCount += 1
+            else:
+                UpdateCount += 1
+    return UpdateCount, FailCount, Errors
+# endregion
+# region ## Adjust interface and module names for VC members
+vc_updates = 0
+taskduration = []
+print(f'Updating interface and module names for Virtual Chassis members.')
+for member in vc_members:
+    taskstart = datetime.datetime.now()
+    device_id = int(member[0])
+    member_number = int(member[1])
+    if member_number == 1:  # Skip master member
+        vc_updates += 1
+        continue
+    update_count, fail_count, errors = update_vc_members('interfaces', device_id, member_number)
+    interfaceUpdateCount += update_count
+    interfaceFailCount += fail_count
+    interfaceErrors.extend(errors)
+    update_count, fail_count, errors = update_vc_members('module-bays', device_id, member_number)
+    moduleUpdateCount += update_count
+    moduleFailCount += fail_count
+    moduleErrors.extend(errors)
+    vc_updates += 1
+    taskend = datetime.datetime.now()
+    taskduration.append((taskend - taskstart).total_seconds())
+    remaining = sum(taskduration) / len(taskduration) * (len(vc_members) - vc_updates)
+    print(f'Import progress: [{"█" * int(vc_updates/len(vc_members)*100):100}]{vc_updates/len(vc_members)*100:.2f}% Complete - ({vc_updates}/{len(vc_members)}) Virtual Chassis members updated. Remaining: {remaining:.2f}s', end="\r")
+print(f'\nVirtual Chassis member interface and module name update process completed.')
+print(f'Total interfaces updated: {interfaceUpdateCount}, failed: {interfaceFailCount}')
+print(f'Total modules updated: {moduleUpdateCount}, failed: {moduleFailCount}')
+# endregion
+# endregion
+
+
+
+
+
 # region # Summary
 endtime = datetime.datetime.now()
 print('Module import complete.')

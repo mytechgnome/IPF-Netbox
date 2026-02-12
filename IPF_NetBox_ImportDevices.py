@@ -401,10 +401,12 @@ def update_vc_members(update_type, device_id, member_number):
     objects = export_netbox_data(f'dcim/{update_type}', netboxlimit=netboxlimit, filters=[f'device_id={device_id}'])
     for object in objects:
         name = object['name']
-        current_name = re.match(r"(\w*)\d+(\/\d+\/\d+)$", name)
+        current_name = re.match(r"^(\w*)(\d+)([\/\{\w+\}]{1,})$", name)
         if current_name:
+            if int(current_name.group(2)) == member_number:
+                continue  # already matches member number, skip update
             prefix = current_name.group(1)
-            suffix = current_name.group(2)
+            suffix = current_name.group(3)
             new_name = f'{prefix}{member_number}{suffix}'
             url = f'{netboxbaseurl}dcim/{update_type}/{object["id"]}/'
             payload = {
