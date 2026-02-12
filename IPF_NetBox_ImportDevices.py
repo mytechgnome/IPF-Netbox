@@ -237,7 +237,9 @@ transform_list.extend(new_devices)
 # endregion
 # region #### Append member number to hostname for VC members
 for i in transform_list:
-    if i['member'] != '1':
+    if i['member'] == '1' or i['member'] == None:
+        pass
+    else:
         i['hostname'] = f"{i['hostname']}/{i['member']}"
 # endregion
 # endregion
