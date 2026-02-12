@@ -421,6 +421,9 @@ total_modules_to_create = 0
 total_modules_with_errors = 0
 full_modules = []
 for i in module_buckets.keys():
+    if i == 'sfp':
+        print(f'Skipping {i} modules for now. SFP module import will be handled in a separate process after all other modules are imported, to allow for proper handling of interfaces within SFP modules.')
+        continue
     print(f'Processing {len(module_buckets[i])} {i} modules...')
     command = f"{i}_modules_to_create, errors_{i}_modules = module_import({i}_modules)"
     exec(command)
@@ -448,10 +451,9 @@ Need to test if the interface configuration is preserved in this case (eg. descr
 '''
 
 # region # Load modules into NetBox
-
-for i in module_buckets.keys():
-    modules_to_create = eval(f'{i}_modules_to_create')
-    print(f'Creating {len(modules_to_create)} {i} modules in NetBox...')
+def create_modules_in_netbox(modules):
+    modules_to_create = eval(f'{modules}_modules_to_create')
+    print(f'Creating {len(modules_to_create)} {modules} modules in NetBox...')
     taskduration = []
     importCounter = 0
     for module in modules_to_create:
@@ -475,14 +477,17 @@ for i in module_buckets.keys():
         taskend = datetime.datetime.now()
         taskduration.append((taskend - taskstart).total_seconds())
         remaining = sum(taskduration) / len(taskduration) * (len(modules_to_create) - importCounter)
-        print(f'Import progress: [{"█" * int(importCounter/len(modules_to_create)*100):100}]{importCounter/len(modules_to_create)*100:.2f}% Complete - ({importCounter}/{len(modules_to_create)}) {i} modules imported. Remaining: {remaining:.2f}s', end="\r")
-    print(f'\n{i} module import process completed.')
+        print(f'Import progress: [{"█" * int(importCounter/len(modules_to_create)*100):100}]{importCounter/len(modules_to_create)*100:.2f}% Complete - ({importCounter}/{len(modules_to_create)}) {modules} modules imported. Remaining: {remaining:.2f}s', end="\r")
+    print(f'\n{modules} module import process completed.')
 # endregion
-print('All module types import process completed.')
+for i in module_buckets.keys():
+    if i == 'sfp':
+        continue
+    create_modules_in_netbox(i)
+print('Initial module types import process completed.')
 
-
-# region # Update module bay and interface names for VC member modules in NetBox based on IPF data
-print('Starting VC member module interface name update process...')
+# region ## Update module bay names for VC member modules in NetBox based on IPF data
+print('Starting VC member module bay name update process...')
 interfaceErrors = []
 moduleErrors = []
 interfaceUpdateCount = 0
@@ -490,10 +495,12 @@ moduleUpdateCount = 0
 interfaceFailCount = 0
 moduleFailCount = 0
 vc_members = []
+# region ### Identify VC members based on device names in NetBox that end with /N where N is the member number
 for i in netbox_devices:
     if i['name'] and re.search(r'/\d+$', i['name']):
         vc_members.append((i['id'], re.search(r'/(\d+)$', i['name']).group(1)))
-# region ## Define function to update interface and module names
+# endregion
+# region ### Define function to update interface and module names
 def update_vc_members(update_type, device_id, member_number):
     Errors = []
     UpdateCount = 0
@@ -528,7 +535,45 @@ def update_vc_members(update_type, device_id, member_number):
                 UpdateCount += 1
     return UpdateCount, FailCount, Errors
 # endregion
-# region ## Adjust interface and module names for VC members
+# region ### Adjust and module names for VC members
+vc_updates = 0
+taskduration = []
+print(f'Updating interface and module names for Virtual Chassis members.')
+for member in vc_members:
+    taskstart = datetime.datetime.now()
+    device_id = int(member[0])
+    member_number = int(member[1])
+    if member_number == 1:  # Skip master member
+        vc_updates += 1
+        continue
+    update_count, fail_count, errors = update_vc_members('module-bays', device_id, member_number)
+    moduleUpdateCount += update_count
+    moduleFailCount += fail_count
+    moduleErrors.extend(errors)
+    vc_updates += 1
+    taskend = datetime.datetime.now()
+    taskduration.append((taskend - taskstart).total_seconds())
+    remaining = sum(taskduration) / len(taskduration) * (len(vc_members) - vc_updates)
+    print(f'Import progress: [{"█" * int(vc_updates/len(vc_members)*100):100}]{vc_updates/len(vc_members)*100:.2f}% Complete - ({vc_updates}/{len(vc_members)}) Virtual Chassis members updated. Remaining: {remaining:.2f}s', end="\r")
+print(f'\nVirtual Chassis member module name update process completed.')
+print(f'Total modules updated: {moduleUpdateCount}, failed: {moduleFailCount}')
+# endregion
+# endregion
+
+# region ## Update module bay selection for SFP modules in VC members based on updated names
+print('Starting SFP module bay update process for VC members...')
+print(f'Processing {len(module_buckets["sfp"])} SFP modules...')
+sfp_modules_to_create, errors_sfp_modules = module_import(module_buckets['sfp'])
+print(f'Total SFP modules to create: {len(eval(f"sfp_modules_to_create"))}')
+print(f'Total SFP modules with errors: {len(eval(f"errors_sfp_modules"))-1}')  # Subtract 1 for header
+file = os.path.join(log_dir, 'sfp_modules_with_errors.csv')
+with open(file, 'w') as f:
+    f.write('\n'.join(errors_sfp_modules))
+# endregion
+# region ## Create SFP modules in NetBox with updated module bay associations
+create_modules_in_netbox('sfp')
+# endregion
+# region ## Adjust and interface names for VC members
 vc_updates = 0
 taskduration = []
 print(f'Updating interface and module names for Virtual Chassis members.')
@@ -543,23 +588,8 @@ for member in vc_members:
     interfaceUpdateCount += update_count
     interfaceFailCount += fail_count
     interfaceErrors.extend(errors)
-    update_count, fail_count, errors = update_vc_members('module-bays', device_id, member_number)
-    moduleUpdateCount += update_count
-    moduleFailCount += fail_count
-    moduleErrors.extend(errors)
-    vc_updates += 1
-    taskend = datetime.datetime.now()
-    taskduration.append((taskend - taskstart).total_seconds())
-    remaining = sum(taskduration) / len(taskduration) * (len(vc_members) - vc_updates)
-    print(f'Import progress: [{"█" * int(vc_updates/len(vc_members)*100):100}]{vc_updates/len(vc_members)*100:.2f}% Complete - ({vc_updates}/{len(vc_members)}) Virtual Chassis members updated. Remaining: {remaining:.2f}s', end="\r")
-print(f'\nVirtual Chassis member interface and module name update process completed.')
-print(f'Total interfaces updated: {interfaceUpdateCount}, failed: {interfaceFailCount}')
-print(f'Total modules updated: {moduleUpdateCount}, failed: {moduleFailCount}')
 # endregion
 # endregion
-
-
-
 
 
 # region # Summary
