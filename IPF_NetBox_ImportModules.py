@@ -113,6 +113,8 @@ for i in ipf_modules:
         if 'Fabric Extender Module' in i['dscr']:
             continue  # skip Fabric Extender Modules
         valid_modules.append(i)
+        if 'stack' in i['dscr'].lower():
+            continue  # skip modules with "stack" in description (stack cables are included in modules from IPF)
     except:
         pass
 print(f'Total valid modules to import: {len(valid_modules)}')
