@@ -22,7 +22,7 @@ if not os.path.isfile('.env'):
 load_dotenv(override=True)
 modulelnamesensitivity = float(os.getenv('modulelnamesensitivity', '0.8'))
 replicate_components = os.getenv('replicate_components', 'true').lower() == 'true'
-adopt_components     = os.getenv('adopt_components', 'false').lower() == 'true'
+adopt_components     = os.getenv('adopt_components', 'true').lower() == 'true'
 
 # Config loaders
 ipfbaseurl, ipftoken, ipfheaders, ipflimit = IPFloader.load_ipf_config()

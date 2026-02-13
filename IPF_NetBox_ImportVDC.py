@@ -60,4 +60,5 @@ for vdc in ipf_vdcs:
         print(f'Failed to import VDC {vdc["vdc_name"]} on device {vdc["hostname"]} into NetBox. Status Code: {r.status_code}, Response: {r.text}')
     import_counter += 1
     print(f'Import progress: [{"█" * int(import_counter/len(ipf_vdcs)*100):100}]{import_counter/len(ipf_vdcs)*100:.2f}% Complete - ({import_counter}/{len(ipf_vdcs)}) VDCs imported.', end="\r")
+print(f'\nVDC import process completed. Total: {len(ipf_vdcs)}, Success: {import_success_count}, Failed: {import_fail_count}')
 # endregion
