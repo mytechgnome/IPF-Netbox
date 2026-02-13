@@ -297,23 +297,99 @@ for d in netbox_devices:
     if m:
         vc_members.append((d.get('id'), int(m.group(1))))
 
-def update_vc_bays(device_id, member_number):
+import re
+import requests
+
+# Helper: rewrite the member digit in interface-like/StackPort strings
+def _rewrite_member_string(s: str, member_number: int) -> str:
+    if not s:
+        return s
+
+    # Interface-like: Te|Gi|Hu|Twe|Eth|Ethernet|TenGigabitEthernet|...
+    m_if = re.match(
+        r'^(?P<pfx>Te|Gi|Hu|Twe|Eth|Ethernet|TenGigabitEthernet|GigabitEthernet|HundredGigE|TwentyFiveGigE)'
+        r'(?P<member>\d+)(?P<rest>/.*)$', s, flags=re.IGNORECASE
+    )
+    if m_if:
+        return f"{m_if.group('pfx')}{member_number}{m_if.group('rest')}"
+
+    # StackPort
+    m_sp = re.match(r'^StackPort(?P<member>\d+)(?P<rest>/.*)$', s, flags=re.IGNORECASE)
+    if m_sp:
+        return f"StackPort{member_number}{m_sp.group('rest')}"
+
+    # POSITION strings that include '{module}':
+    # e.g. 'TwentyFiveGigE1/{module}/1' → replace the leading member only
+    m_pos = re.match(
+        r'^(?P<pfx>Te|Gi|Hu|Twe|Eth|Ethernet|TenGigabitEthernet|GigabitEthernet|HundredGigE|TwentyFiveGigE)'
+        r'(?P<member>\d+)(?P<rest>/\{module\}.*)$', s, flags=re.IGNORECASE
+    )
+    if m_pos:
+        return f"{m_pos.group('pfx')}{member_number}{m_pos.group('rest')}"
+
+    # Otherwise, return unchanged (PSU/FAN/SUP bays or any non-interface naming)
+    return s
+
+
+def update_vc_bays(device_id: int, member_number: int):
     bays = export_netbox_data('dcim/module-bays', netboxlimit=netboxlimit, filters=[f'device_id={device_id}'])
+    updates = 0
+    skips   = 0
+    errors  = []
+
     for mb in bays:
-        name = mb.get('name') or ''
-        m_if = re.match(r'^(?P<pfx>Te|Gi|Hu|Twe|Eth|Ethernet|TenGigabitEthernet|GigabitEthernet|HundredGigE|TwentyFiveGigE)(?P<member>\d+)(?P<rest>/.*)$', name)
-        m_sp = re.match(r'^StackPort(?P<member>\d+)(?P<rest>/.*)$', name)
-        target = None
-        if m_if:
-            target = f"{m_if.group('pfx')}{member_number}{m_if.group('rest')}"
-        elif m_sp:
-            target = f"StackPort{member_number}{m_sp.group('rest')}"
+        name  = mb.get('name') or ''
+        label = mb.get('label') or ''
+        pos   = mb.get('position') or ''
+
+        # Only touch interface-like or StackPort bay names
+        name_is_if = re.match(
+            r'^(Te|Gi|Hu|Twe|Eth|Ethernet|TenGigabitEthernet|GigabitEthernet|HundredGigE|TwentyFiveGigE)\d+/',
+            name, flags=re.IGNORECASE
+        )
+        name_is_sp = name.startswith('StackPort')
+
+        if not (name_is_if or name_is_sp):
+            # Leave PSU/FAN/SUP/etc. alone
+            skips += 1
+            continue
+
+        new_name  = _rewrite_member_string(name,  member_number)
+        new_label = _rewrite_member_string(label, member_number)
+        new_pos   = _rewrite_member_string(pos,   member_number)
+
+        # Build patch only for changed fields
+        payload = {}
+        if new_name and new_name != name:
+            payload['name']    = new_name
+            payload['display'] = new_name   # keep display aligned
+
+        # Update label if it looks interface-like and changed
+        if new_label != label:
+            payload['label'] = new_label
+
+        # Update position if it contains a member and/or {module} path that changed
+        if new_pos != pos:
+            payload['position'] = new_pos
+
+        if not payload:
+            skips += 1
+            continue
+
+        url = f"{netboxbaseurl}dcim/module-bays/{mb['id']}/"
+        r = requests.patch(url, headers=netboxheaders, json=payload, verify=False)
+        if r.status_code == 200:
+            updates += 1
         else:
-            continue  # skip PSU/FAN/SUP bays
-        if target and target != name:
-            url     = f"{netboxbaseurl}dcim/module-bays/{mb['id']}/"
-            payload = {'name': target, 'display': target}
-            requests.patch(url, headers=netboxheaders, json=payload, verify=False)
+            errors.append(f"{device_id}:{mb['id']} => {r.status_code} {r.text} | payload={payload}")
+
+    # Optional: log a summary
+    with (log_dir / f'vc_bay_updates_device_{device_id}.log').open('w', encoding='utf-8') as f:
+        f.write(f"member={member_number}, updates={updates}, skips={skips}\n")
+        for e in errors:
+            f.write(e + "\n")
+
+    return updates, skips, errors
 
 for did, member in vc_members:
     if member == 1: continue
