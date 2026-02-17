@@ -15,7 +15,7 @@ Bugs:
 # region # Imports and setup
 from dotenv import load_dotenv
 from IPFloader import load_ipf_config
-import IPFexporter
+from IPFexporter import export_ipf_data
 from NetBoxloader import load_netbox_config
 from NetBoxexporter import export_netbox_data
 import requests
@@ -78,16 +78,16 @@ modellnamesensitivity = float(os.getenv('modellnamesensitivity', '0.8'))
 
 # region # Export data from IP Fabric
 # region ## Export Devices from IP Fabric
-ipf_devices = IPFexporter.export_ipf_data('inventory/devices', ['hostname', 'sn', 'siteName', 'snHw', 'loginIpv4', 'loginIpv6', 'uptime', 'reload', 'memoryUtilization', 'vendor', 'family', 'platform', 'model', 'version', 'devType'])
+ipf_devices = export_ipf_data('inventory/devices', ['hostname', 'sn', 'siteName', 'snHw', 'loginIpv4', 'loginIpv6', 'uptime', 'reload', 'memoryUtilization', 'vendor', 'family', 'platform', 'model', 'version', 'devType'])
 print(f'Total devices fetched from IP Fabric: {len(ipf_devices)}')
 # endregion
 # region ## Export VC members from IP Fabric
 # region ### Export Stack members from IP Fabric
-ipf_stackmembers = IPFexporter.export_ipf_data('platforms/stack/members', ['master', 'sn', 'siteName', 'member', 'pn', 'memberSn', 'role', 'state', 'mac', 'ver', 'image', 'hwVer'])
+ipf_stackmembers = export_ipf_data('platforms/stack/members', ['master', 'sn', 'siteName', 'member', 'pn', 'memberSn', 'role', 'state', 'mac', 'ver', 'image', 'hwVer'])
 print(f'Total virtual chassis members fetched from IP Fabric: {len(ipf_stackmembers)}')
 # endregion
 # region ### Export VSS members from IP Fabric
-ipf_vssmembers = IPFexporter.export_ipf_data('platforms/vss/chassis', ['hostname', 'chassisSn', 'siteName', 'chassisId', 'sn', 'state'])
+ipf_vssmembers = export_ipf_data('platforms/vss/chassis', ['hostname', 'chassisSn', 'siteName', 'chassisId', 'sn', 'state'])
 print(f'Total VSS members fetched from IP Fabric: {len(ipf_vssmembers)}')
 # endregion
 # endregion
@@ -96,7 +96,7 @@ print(f'Total VSS members fetched from IP Fabric: {len(ipf_vssmembers)}')
 # region # Transform VC members from IP Fabric
 # region ## Build Lookup Tables
 # region ### Get Part Numbers from IP Fabric
-ipf_pns = IPFexporter.export_ipf_data('inventory/pn', ['pid', 'sn'])
+ipf_pns = export_ipf_data('inventory/pn', ['pid', 'sn'])
 # endregion
 # region ### Match Device Types to NetBox Device Types
 # region #### Get Device Types from NetBox

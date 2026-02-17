@@ -8,7 +8,7 @@ Date: January 16, 2025
 # region # Imports and setup
 from IPFloader import load_ipf_config
 from NetBoxloader import load_netbox_config
-import IPFexporter
+from IPFexporter import export_ipf_data
 import requests
 from datetime import datetime
 
@@ -40,7 +40,7 @@ while connected == False:
 # endregion
 
 # region # Export Platforms from IP Fabric
-ipf_platforms = IPFexporter.export_ipf_data('inventory/summary/families', ['vendor', 'family'])
+ipf_platforms = export_ipf_data('inventory/summary/families', ['vendor', 'family'])
 print(f'Total platforms fetched from IP Fabric: {len(ipf_platforms)}')
 # endregion
 

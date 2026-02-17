@@ -23,7 +23,7 @@ import json
 import os
 from pathlib import Path
 import InterfaceNameNormalization as ifn
-import IPFexporter
+from IPFexporter import export_ipf_data
 from datetime import datetime
 
 starttime = datetime.now()
@@ -70,7 +70,7 @@ while connected == False:
 # endregion
 
 # region # Export connectivity matrix from IP Fabric
-ipf_connections = IPFexporter.export_ipf_data('interfaces/connectivity-matrix', ['siteName', 'localHost', 'localInt', 'localMedia', 'remoteHost', 'remoteInt', 'remoteMedia', 'protocol'], filters={"protocol": ['like', 'cdp']})
+ipf_connections = export_ipf_data('interfaces/connectivity-matrix', ['siteName', 'localHost', 'localInt', 'localMedia', 'remoteHost', 'remoteInt', 'remoteMedia', 'protocol'], filters={"protocol": ['like', 'cdp']})
 print(f'Total cables fetched from IP Fabric: {len(ipf_connections)}')
 # endregion
 

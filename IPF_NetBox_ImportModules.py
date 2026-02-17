@@ -3,7 +3,7 @@ import os
 import re
 import yaml
 import requests
-import IPFexporter
+from IPFexporter import export_ipf_data
 from IPFloader import load_ipf_config
 from NetBoxloader import load_netbox_config
 from NetBoxexporter import export_netbox_data
@@ -60,11 +60,11 @@ with yaml_path.open('r', encoding='utf-8') as f:
     module_rules = yaml.safe_load(f)
 
 # === Export data ===
-ipf_modules        = IPFexporter.export_ipf_data('inventory/pn', ['hostname','name','dscr','pid','sn','deviceSn','model'])
+ipf_modules        = export_ipf_data('inventory/pn', ['hostname','name','dscr','pid','sn','deviceSn','model'])
 netbox_moduletypes = export_netbox_data('dcim/module-types')
 netbox_devices     = export_netbox_data('dcim/devices')
 netbox_module_bays = export_netbox_data('dcim/module-bays')
-ipf_vcmembers      = IPFexporter.export_ipf_data('platforms/stack/members', ['master','member','sn'])
+ipf_vcmembers      = export_ipf_data('platforms/stack/members', ['master','member','sn'])
 
 # === Helpers ===
 prefix_map   = module_rules.get('globals', {}).get('prefix_map') or {}

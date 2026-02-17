@@ -14,7 +14,7 @@ TO-DO:
 from datetime import datetime
 from IPFloader import load_ipf_config
 from NetBoxloader import load_netbox_config
-import IPFexporter
+from IPFexporter import export_ipf_data
 import requests
 
 starttime = datetime.now()
@@ -44,7 +44,7 @@ while connected == False:
 # endregion
 
 # region # Export Sites from IP Fabric
-ipf_sites = IPFexporter.export_ipf_data('inventory/sites', ['siteName'])
+ipf_sites = export_ipf_data('inventory/sites', ['siteName'])
 print(f'Total sites fetched from IP Fabric: {len(ipf_sites)}')
 # endregion
 

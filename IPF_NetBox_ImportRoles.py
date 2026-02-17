@@ -9,7 +9,7 @@ Date: January 16, 2025
 import json
 from IPFloader import load_ipf_config
 from NetBoxloader import load_netbox_config
-import IPFexporter
+from IPFexporter import export_ipf_data
 import requests
 from pathlib import Path
 import os
@@ -53,7 +53,7 @@ if not os.path.isfile(os.path.join(currentdir, 'DataSources', 'NetBoxDeviceRoleC
     print('If device roles require specific colors, please create the file with the necessary mappings.')
 
 # region # Export Device Types from IP Fabric
-ipf_device_types = IPFexporter.export_ipf_data('inventory/devices', ['devType'])
+ipf_device_types = export_ipf_data('inventory/devices', ['devType'])
 print(f'Total device types fetched from IP Fabric: {len(ipf_device_types)}')
 # endregion
 

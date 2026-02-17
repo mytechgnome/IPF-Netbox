@@ -10,9 +10,9 @@ TO-DO:
 '''
 
 # region # Imports and setup
-import IPFloader
-import IPFexporter
-import NetBoxloader
+from IPFloader import load_ipf_config
+from IPFexporter import export_ipf_data
+from NetBoxloader import load_netbox_config
 from NetBoxexporter import export_netbox_data
 import requests
 from datetime import datetime
@@ -20,22 +20,39 @@ from datetime import datetime
 starttime = datetime.now()
 
 # region ## Load IP Fabric configuration
-ipfbaseurl, ipftoken, ipfheaders, ipflimit = IPFloader.load_ipf_config()
+connected = False
+while connected == False:
+    try:
+        ipfbaseurl, ipftoken, ipfheaders, ipflimit = load_ipf_config()
+        connected = True
+    except Exception as e:
+        print(f"Error loading IP Fabric configuration: {e}")
+        print("Please ensure the .env file is configured correctly and try again.")
+        input("Press Enter to retry...")
+
 # endregion
 # region ## Load NetBox configuration
-netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = NetBoxloader.load_netbox_config()
+connected = False
+while connected == False:
+    try:
+        netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = load_netbox_config()
+        connected = True
+    except Exception as e:
+        print(f"Error loading NetBox configuration: {e}")
+        print("Please ensure the .env file is configured correctly and try again.")
+        input("Press Enter to retry...")
 # endregion
 # endregion
 
 # region # Export Virtual Chassis from IP Fabric
 ipf_vc = []
 # region ## Get stack data from IP Fabric
-ipf_stack = IPFexporter.export_ipf_data('platforms/stack', ['master'])
+ipf_stack = export_ipf_data('platforms/stack', ['master'])
 for i in ipf_stack:
     ipf_vc.append(i['master'])
 # endregion
 # region ## Get VSS data from IP Fabric
-ipf_vss = IPFexporter.export_ipf_data('platforms/vss/overview', ['hostname'])
+ipf_vss = export_ipf_data('platforms/vss/overview', ['hostname'])
 for i in ipf_vss:
     ipf_vc.append(i['hostname'])
 print(f'Total virtual chassis fetched from IP Fabric: {len(ipf_vc)}')
