@@ -151,11 +151,11 @@ def classify_module(mod):
 valid_modules = []
 for i in ipf_modules:
     try:
-        if i['sn']   == i['deviceSn']:            continue
-        if i['pid']  == i['dscr']:               continue
-        if i['pid']  == i['model']:              continue
-        if 'Fabric Extender Module' in (i['dscr'] or ''):  continue
-        if 'stack' in (i['dscr'] or '').lower(): continue
+        if i['sn']   == i['deviceSn']:                    continue
+        if i['pid']  == i['dscr']:                        continue
+        if i['pid']  == i['model']:                       continue
+        if 'Fabric Extender Module' in (i['dscr'] or ''): continue
+        if 'stack' in (i['dscr'] or '').lower():          continue
         valid_modules.append(i)
     except Exception:
         pass
@@ -366,6 +366,8 @@ for bucket in module_buckets.keys():
         continue
     bucket_modules = [m for b,m in full_modules if b == bucket]
     create_modules_in_netbox(bucket, bucket_modules)
+    taskend = datetime.now()
+    print(f"\nFinished creating '{bucket}' modules. Time taken: {(datetime.now() - taskstart).total_seconds():.2f}s")
 print("Module creation complete.")
 # endregion
 # endregion
@@ -480,7 +482,9 @@ taskduration = []
 vc_update_count = 0
 for did, member in vc_members:
     taskstart = datetime.now()
-    if member == 1: continue
+    if member == 1: 
+        vc_update_count += 1
+        continue
     update_vc_bays(did, member)
     taskend = datetime.now()
     taskduration.append((taskend - taskstart).total_seconds())
