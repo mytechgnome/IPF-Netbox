@@ -13,9 +13,9 @@ import NetBoxloader
 import requests
 from pathlib import Path
 import os
-import datetime
+from datetime import datetime
 
-starttime = datetime.datetime.now()
+starttime = datetime.now()
 
 # region ## Load IP Fabric configuration
 ipfbaseurl, ipftoken, ipfheaders, ipflimit = IPFloader.load_ipf_config()
@@ -77,7 +77,7 @@ for role in devType:
         roleFailCount += 1
 # endregion
 # region # Summary and logging
-endtime = datetime.datetime.now()
+endtime = datetime.now()
 duration = endtime - starttime
 print(f'Device Role import process completed. Start time: {starttime}, End time: {endtime}, Duration: {duration}')
 print(f'Total Device Roles processed: {len(devType)}')

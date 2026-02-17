@@ -16,9 +16,9 @@ import IPFexporter
 import NetBoxloader
 from NetBoxexporter import export_netbox_data
 import requests
-import datetime
+from datetime import datetime
 
-starttime = datetime.datetime.now()
+starttime = datetime.now()
 
 # region ## Load IP Fabric configuration
 ipfbaseurl, ipftoken, ipfheaders, ipflimit = IPFloader.load_ipf_config()
@@ -100,9 +100,9 @@ for vc in vc_decom:
     }
     r = requests.patch(url,headers=netboxheaders,json=payload,verify=False)
 # region # Summary and logging
-endtime = datetime.datetime.now()
+endtime = datetime.now()
 duration = endtime - starttime
-print(f'Virtual Chassis import process completed. Duration: {duration}')
+print(f'Virtual Chassis import process completed. Start time: {starttime}, End time: {endtime}, Duration: {duration}')
 print(f'Total virtual chassis processed: {len(ipf_vc)}')
 print(f'Total virtual chassis to import: {len(vc_add)}')
 print(f'Total virtual chassis to decommission: {len(vc_decom)}')

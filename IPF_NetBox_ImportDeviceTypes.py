@@ -38,9 +38,9 @@ from dotenv import load_dotenv
 import IPFloader
 import IPFexporter
 import NetBoxloader
-import datetime
+from datetime import datetime
 
-starttime = datetime.datetime.now()
+starttime = datetime.now()
 
 # region ## Load IP Fabric configuration
 ipfbaseurl, ipftoken, ipfheaders, ipflimit = IPFloader.load_ipf_config()
@@ -277,7 +277,7 @@ print(f'Importing device types into NetBox...')
 importCounter = 0
 taskduration = []
 for i in ipf_models:
-    taskstart = datetime.datetime.now()
+    taskstart = datetime.now()
     objecttype = 'device'
     vendor = i['vendor']
     manufacturerID = netbox_vendors.get(vendor.lower(), None)
@@ -375,7 +375,7 @@ for i in ipf_models:
             if r.text.find('already exists') != -1:
                 duplicate += 1
         importCounter += 1
-        taskend = datetime.datetime.now()
+        taskend = datetime.now()
         taskduration.append((taskend - taskstart).total_seconds())
         remaining = sum(taskduration) / len(taskduration) * (len(ipf_models) - importCounter)
         print(f'Import progress: [{"█" * int(importCounter/len(ipf_models)*100):100}] {importCounter/len(ipf_models)*100:.2f}% Complete - ({importCounter}/{len(ipf_models)}) device types imported. Remaining: {remaining:.2f}s', end="\r")
@@ -465,7 +465,7 @@ for i in modules['modules']:
     importCounter = 0
     taskduration = []
     for module in modules['modules'][i]:
-        taskstart = datetime.datetime.now()
+        taskstart = datetime.now()
         moduletypelibrary = get_close_matches(module.lower(),basemodulenames, n=1 , cutoff=modulenamesensitivity)
         if moduletypelibrary:
             score = SequenceMatcher(None, module.lower(), moduletypelibrary[0]).ratio()
@@ -507,7 +507,7 @@ for i in modules['modules']:
             error_text = f'{vendorlibrary},{module}'
             errors_matchmodule.append(error_text)
         importCounter += 1
-        taskend = datetime.datetime.now()
+        taskend = datetime.now()
         taskduration.append((taskend - taskstart).total_seconds())
         remaining = sum(taskduration) / len(taskduration) * (len(modules['modules'][i]) - importCounter)
         print(f'Import progress: [{"█" * int(importCounter/len(modules["modules"][i])*100):100}]{importCounter/len(modules["modules"][i])*100:.2f}% Complete - ({importCounter}/{len(modules["modules"][i])}) {i} modules imported. Remaining: {remaining:.2f}s', end="\r")
@@ -546,9 +546,9 @@ with open(os.path.join(log_dir, 'DeviceTypeImport_Mappings_Module.csv'), 'w') as
 with open(os.path.join(log_dir, 'DeviceTypeImport_Mappings_Vendor.csv'), 'w') as f:
     for item in mappings_vendor:
         f.write("%s\n" % item)
-endtime = datetime.datetime.now()
+endtime = datetime.now()
 duration = endtime - starttime
-print(f'Device Type and Module Type import process completed in {duration}')
+print(f'Device Type import process completed. Start time: {starttime}, End time: {endtime}, Duration: {duration}')
 print(f'Total device types processed: {len(ipf_models)}')
 print(f'Total module types processed: {len(ipf_modules)}')
 print(f'Total device types failed to import: {len(errors_importdevice)-1}')

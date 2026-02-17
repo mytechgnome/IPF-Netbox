@@ -10,9 +10,9 @@ import IPFloader
 import IPFexporter
 import NetBoxloader
 import requests
-import datetime
+from datetime import datetime
 
-starttime = datetime.datetime.now()
+starttime = datetime.now()
 
 # region ## Load IP Fabric configuration
 ipfbaseurl, ipftoken, ipfheaders, ipflimit = IPFloader.load_ipf_config()
@@ -61,9 +61,9 @@ for platform in ipf_platforms:
         print(f'Failed to import platform {platform_name} into NetBox. Status Code: {r.status_code}, Response: {r.text}')
 # endregion
 # region # Summary and logging
-endtime = datetime.datetime.now()
+endtime = datetime.now()
 duration = endtime - starttime
-print(f'Platform import process completed in {duration}.')
+print(f'Platform import process completed. Start time: {starttime}, End time: {endtime}, Duration: {duration}')
 print(f'Total platforms processed: {len(ipf_platforms)}')
 print(f'Total platforms successfully imported: {platformSuccessCount}')
 print(f'Total platforms failed to import: {platformFailCount}')

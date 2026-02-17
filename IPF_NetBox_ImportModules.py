@@ -1,13 +1,20 @@
 # -*- coding: utf-8 -*-
-import os, re, yaml, datetime, requests
+import os
+import re
+import yaml
+import requests
+import IPFexporter
+import IPFloader
+import NetBoxloader
+from NetBoxexporter import export_netbox_data
 from pathlib import Path
+from datetime import datetime
 from dotenv import load_dotenv
 from difflib import get_close_matches
-import IPFloader, IPFexporter, NetBoxloader
-from NetBoxexporter import export_netbox_data
+
 
 # === Setup ===
-starttime = datetime.datetime.now()
+starttime = datetime.now()
 try:
     currentdir = Path(__file__).parent
 except Exception:
@@ -425,8 +432,6 @@ for did, member in vc_members:
     update_vc_interfaces(did, member)
 
 # === Summary ===
-endtime = datetime.datetime.now()
-print('Module import complete.')
-print(f'Start time: {starttime}')
-print(f'End time: {endtime}')
-print(f'Duration: {endtime - starttime}')
+endtime = datetime.now()
+duration = endtime - starttime
+print(f'Module import process completed. Start time: {starttime}, End time: {endtime}, Duration: {duration}')

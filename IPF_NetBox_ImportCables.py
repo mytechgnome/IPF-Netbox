@@ -24,9 +24,9 @@ import os
 from pathlib import Path
 import InterfaceNameNormalization as ifn
 import IPFexporter
-import datetime
+from datetime import datetime
 
-starttime = datetime.datetime.now()
+starttime = datetime.now()
 
 # region ## Check for NetBoxCableTypeMappings.json file
 try:
@@ -198,7 +198,7 @@ url = f'{netboxbaseurl}dcim/cables/'
 taskduration = []
 cables_updated = 0
 for i in cabledata:
-    taskstart = datetime.datetime.now()
+    taskstart = datetime.now()
     cable_payload = {
         "type": i["cable"],
         "a_terminations": [
@@ -226,12 +226,12 @@ for i in cabledata:
         #print(f'Failed to create cable between {i["localHost"]} and {i["remoteHost"]}. Status code: {r.status_code}')
         continue
     cables_updated += 1
-    taskend = datetime.datetime.now()
+    taskend = datetime.now()
     taskduration.append((taskend - taskstart).total_seconds())
     remaining = sum(taskduration) / len(taskduration) * (len(cabledata) - cables_updated)
     print(f'Import progress: [{"█" * int(cables_updated/len(cabledata)*100):100}]{cables_updated/len(cabledata)*100:.2f}% Complete - ({cables_updated}/{len(cabledata)}) Cables imported. Remaining: {remaining:.2f}s', end="\r")
 print(f'\nCable import process completed.')
 # endregion
-endtime = datetime.datetime.now()
+endtime = datetime.now()
 duration = endtime - starttime
 print(f'Cable import process completed. Start time: {starttime}, End time: {endtime}, Duration: {duration}')

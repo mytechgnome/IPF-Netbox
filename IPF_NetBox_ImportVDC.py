@@ -11,6 +11,9 @@ import NetBoxloader
 from IPFexporter import export_ipf_data
 from NetBoxexporter import export_netbox_data
 import requests
+from datetime import datetime
+
+starttime = datetime.now()
 
 # region ## Load IP Fabric configuration
 ipfbaseurl, ipftoken, ipfheaders, ipflimit = IPFloader.load_ipf_config()
@@ -61,4 +64,7 @@ for vdc in ipf_vdcs:
     import_counter += 1
     print(f'Import progress: [{"█" * int(import_counter/len(ipf_vdcs)*100):100}]{import_counter/len(ipf_vdcs)*100:.2f}% Complete - ({import_counter}/{len(ipf_vdcs)}) VDCs imported.', end="\r")
 print(f'\nVDC import process completed. Total: {len(ipf_vdcs)}, Success: {import_success_count}, Failed: {import_fail_count}')
+endtime = datetime.now()
+duration = endtime - starttime
+print(f'VDC import process completed. Start time: {starttime}, End time: {endtime}, Duration: {duration}')
 # endregion

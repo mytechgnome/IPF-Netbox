@@ -11,12 +11,13 @@ TO-DO:
 '''
 
 # region # Imports and setup
+from datetime import datetime
 import IPFloader
 import IPFexporter
 import NetBoxloader
 import requests
 
-
+starttime = datetime.now()
 # region ## Load IP Fabric configuration
 ipfbaseurl, ipftoken, ipfheaders, ipflimit = IPFloader.load_ipf_config()
 # endregion
@@ -51,7 +52,9 @@ for site in ipf_sites:
     else:
         siteFailCount += 1
         print(f'Failed to import site {site_name} into NetBox. Status Code: {r.status_code}, Response: {r.text}')
-print('Site import process completed.')
+endtime = datetime.now()
+duration = endtime - starttime
+print(f'Site import process completed. Start time: {starttime}, End time: {endtime}, Duration: {duration}')
 print(f'Total sites processed: {len(ipf_sites)}')
 print(f'Total sites successfully imported: {siteSuccessCount}')
 print(f'Total sites failed to import: {siteFailCount}')

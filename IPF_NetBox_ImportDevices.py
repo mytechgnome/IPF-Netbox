@@ -21,11 +21,11 @@ from NetBoxexporter import export_netbox_data
 import requests
 import os
 from pathlib import Path
-import datetime
+from datetime import datetime
 import re
 from difflib import get_close_matches
 
-starttime = datetime.datetime.now()
+starttime = datetime.now()
 
 # region ## Load IP Fabric configuration
 ipfbaseurl, ipftoken, ipfheaders, ipflimit = IPFloader.load_ipf_config()
@@ -321,7 +321,7 @@ taskduration = []
 # region ## Import devices
 url = f'{netboxbaseurl}dcim/devices/'
 for device in transform_list:
-    taskstart = datetime.datetime.now()
+    taskstart = datetime.now()
     devicename       = device['hostname']
     device_type      = device['device_type_ID']
     device_role      = device['device_role_ID']
@@ -368,7 +368,7 @@ for device in transform_list:
         error_text = f'{devicename}, {r.text}, {payload}, {device}'
         devicesfailed.append(error_text)
     deviceimportcounter += 1
-    taskend = datetime.datetime.now()
+    taskend = datetime.now()
     taskduration.append((taskend - taskstart).total_seconds())
     remaining = sum(taskduration) / len(taskduration) * (len(transform_list) - deviceimportcounter)
     print(f'Import progress: [{"█" * int(deviceimportcounter/len(transform_list)*100):100}]{deviceimportcounter/len(transform_list)*100:.2f}% Complete - ({deviceimportcounter}/{len(transform_list)}) devices imported. Remaining: {remaining:.2f}s', end="\r")
@@ -432,7 +432,7 @@ vc_updates = 0
 taskduration = []
 print(f'Updating interface and module names for Virtual Chassis members.')
 for member in vc_members:
-    taskstart = datetime.datetime.now()
+    taskstart = datetime.now()
     device_id = int(member[0])
     member_number = int(member[1])
     if member_number == 1:  # Skip master member
@@ -447,7 +447,7 @@ for member in vc_members:
     moduleFailCount += fail_count
     moduleErrors.extend(errors)
     vc_updates += 1
-    taskend = datetime.datetime.now()
+    taskend = datetime.now()
     taskduration.append((taskend - taskstart).total_seconds())
     remaining = sum(taskduration) / len(taskduration) * (len(vc_members) - vc_updates)
     print(f'Import progress: [{"█" * int(vc_updates/len(vc_members)*100):100}]{vc_updates/len(vc_members)*100:.2f}% Complete - ({vc_updates}/{len(vc_members)}) Virtual Chassis members updated. Remaining: {remaining:.2f}s', end="\r")
@@ -469,9 +469,9 @@ Maybe this should be a separate script?
 # endregion
 # endregion
 # region # Summary and logging
-endtime = datetime.datetime.now()
+endtime = datetime.now()
 duration = endtime - starttime
-print(f'Device import process completed. Duration: {duration}')
+print(f'Device import process completed. Start time: {starttime}, End time: {endtime}, Duration: {duration}')
 print(f'Total devices processed: {len(transform_list)}')
 print(f'Total devices successfully imported: {deviceSuccessCount}')
 print(f'Total devices successfully updated: {deviceUpdateCount}')
