@@ -15,8 +15,8 @@ TO-DO:
 '''
 
 # region # Imports and setup
-import IPFloader 
-import NetBoxloader
+from IPFloader import load_ipf_config
+from NetBoxloader import load_netbox_config
 import requests
 import pandas as pd
 import json
@@ -45,10 +45,27 @@ print(f'Creating log directory at {log_dir}')
 os.makedirs(log_dir, exist_ok=True)
 # endregion
 # region ## Load IP Fabric configuration
-ipfbaseurl, ipftoken, ipfheaders, ipflimit = IPFloader.load_ipf_config()
+connected = False
+while connected == False:
+    try:
+        ipfbaseurl, ipftoken, ipfheaders, ipflimit = load_ipf_config()
+        connected = True
+    except Exception as e:
+        print(f"Error loading IP Fabric configuration: {e}")
+        print("Please ensure the .env file is configured correctly and try again.")
+        input("Press Enter to retry...")
+
 # endregion
 # region ## Load NetBox configuration
-netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = NetBoxloader.load_netbox_config()
+connected = False
+while connected == False:
+    try:
+        netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = load_netbox_config()
+        connected = True
+    except Exception as e:
+        print(f"Error loading NetBox configuration: {e}")
+        print("Please ensure the .env file is configured correctly and try again.")
+        input("Press Enter to retry...")
 # endregion
 # endregion
 

@@ -4,8 +4,8 @@ import re
 import yaml
 import requests
 import IPFexporter
-import IPFloader
-import NetBoxloader
+from IPFloader import load_ipf_config
+from NetBoxloader import load_netbox_config
 from NetBoxexporter import export_netbox_data
 from pathlib import Path
 from datetime import datetime
@@ -32,8 +32,27 @@ replicate_components = os.getenv('replicate_components', 'true').lower() == 'tru
 adopt_components     = os.getenv('adopt_components', 'true').lower() == 'true'
 
 # Config loaders
-ipfbaseurl, ipftoken, ipfheaders, ipflimit = IPFloader.load_ipf_config()
-netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = NetBoxloader.load_netbox_config()
+connected = False
+while connected == False:
+    try:
+        ipfbaseurl, ipftoken, ipfheaders, ipflimit = load_ipf_config()
+        connected = True
+    except Exception as e:
+        print(f"Error loading IP Fabric configuration: {e}")
+        print("Please ensure the .env file is configured correctly and try again.")
+        input("Press Enter to retry...")
+
+# endregion
+# region ## Load NetBox configuration
+connected = False
+while connected == False:
+    try:
+        netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = load_netbox_config()
+        connected = True
+    except Exception as e:
+        print(f"Error loading NetBox configuration: {e}")
+        print("Please ensure the .env file is configured correctly and try again.")
+        input("Press Enter to retry...")
 
 # === YAML rules ===
 yaml_path = currentdir / 'DataSources' / 'IPFModuleMapping.yaml'

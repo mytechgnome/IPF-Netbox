@@ -14,9 +14,9 @@ Bugs:
 
 # region # Imports and setup
 from dotenv import load_dotenv
-import IPFloader
+from IPFloader import load_ipf_config
 import IPFexporter
-import NetBoxloader
+from NetBoxloader import load_netbox_config
 from NetBoxexporter import export_netbox_data
 import requests
 import os
@@ -28,10 +28,27 @@ from difflib import get_close_matches
 starttime = datetime.now()
 
 # region ## Load IP Fabric configuration
-ipfbaseurl, ipftoken, ipfheaders, ipflimit = IPFloader.load_ipf_config()
+connected = False
+while connected == False:
+    try:
+        ipfbaseurl, ipftoken, ipfheaders, ipflimit = load_ipf_config()
+        connected = True
+    except Exception as e:
+        print(f"Error loading IP Fabric configuration: {e}")
+        print("Please ensure the .env file is configured correctly and try again.")
+        input("Press Enter to retry...")
+
 # endregion
 # region ## Load NetBox configuration
-netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = NetBoxloader.load_netbox_config()
+connected = False
+while connected == False:
+    try:
+        netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = load_netbox_config()
+        connected = True
+    except Exception as e:
+        print(f"Error loading NetBox configuration: {e}")
+        print("Please ensure the .env file is configured correctly and try again.")
+        input("Press Enter to retry...")
 # endregion
 # region ## Define paths
 try:

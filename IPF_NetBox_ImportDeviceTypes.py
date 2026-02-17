@@ -35,18 +35,35 @@ from pathlib import Path
 from difflib import get_close_matches
 from difflib import SequenceMatcher
 from dotenv import load_dotenv
-import IPFloader
-import IPFexporter
-import NetBoxloader
+from IPFloader import load_ipf_config
+from IPFexporter import export_ipf_data
+from NetBoxloader import load_netbox_config
 from datetime import datetime
 
 starttime = datetime.now()
 
 # region ## Load IP Fabric configuration
-ipfbaseurl, ipftoken, ipfheaders, ipflimit = IPFloader.load_ipf_config()
+connected = False
+while connected == False:
+    try:
+        ipfbaseurl, ipftoken, ipfheaders, ipflimit = load_ipf_config()
+        connected = True
+    except Exception as e:
+        print(f"Error loading IP Fabric configuration: {e}")
+        print("Please ensure the .env file is configured correctly and try again.")
+        input("Press Enter to retry...")
+
 # endregion
 # region ## Load NetBox configuration
-netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = NetBoxloader.load_netbox_config()
+connected = False
+while connected == False:
+    try:
+        netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = load_netbox_config()
+        connected = True
+    except Exception as e:
+        print(f"Error loading NetBox configuration: {e}")
+        print("Please ensure the .env file is configured correctly and try again.")
+        input("Press Enter to retry...")
 # endregion
 
 # region # Define variables
@@ -154,7 +171,7 @@ lowermanufacturernames = [manufacturer.lower() for manufacturer in manufacturers
 # region ## Export list of vendors from IP Fabric
 print('Exporting vendors from IP Fabric...')
 vendors = json.loads('{"vendors": []}')
-ipf_vendors = IPFexporter.export_ipf_data('inventory/pn', ['vendor']) # Collects from PN table to get all vendors, including those only used in modules
+ipf_vendors = export_ipf_data('inventory/pn', ['vendor']) # Collects from PN table to get all vendors, including those only used in modules
 # region ### Filter unique vendors
 unique_vendors = []
 seen_vendors = set()
@@ -219,7 +236,7 @@ print(f'NetBox manufacturer import complete. {vendorSuccessCount} of {len(ipf_ve
 # region ### Get list of models from IP Fabric
 print('Exporting device types from IP Fabric...')
 modelslist = json.loads('{"models": []}')
-ipf_models = IPFexporter.export_ipf_data('inventory/summary/models', ['vendor', 'family', 'platform', 'model'])
+ipf_models = export_ipf_data('inventory/summary/models', ['vendor', 'family', 'platform', 'model'])
 print(f'Total device types fetched from IP Fabric: {len(ipf_models)}')
 # endregion
 '''
@@ -227,7 +244,7 @@ NOTE: This section is required because IP Fabric does not list stack member devi
 IPF Feature Reequest 357 is open to add this functionality. 
 '''
 # region ### Get list of stack member models from IP Fabric
-ipf_vcmembers = IPFexporter.export_ipf_data('platforms/stack/members', ['master', 'pn'])
+ipf_vcmembers = export_ipf_data('platforms/stack/members', ['master', 'pn'])
 print(f'Total stack members fetched from IP Fabric: {len(ipf_vcmembers)}')
 # endregion
 # region ### Filter unique models
@@ -247,7 +264,7 @@ for item in missing_models:
         
 # endregion
 # region ### Collect data for missing models
-ipf_devices = IPFexporter.export_ipf_data('inventory/devices', ['hostname', 'vendor', 'family', 'platform'])
+ipf_devices = export_ipf_data('inventory/devices', ['hostname', 'vendor', 'family', 'platform'])
 # region #### Build a lookup dictionary for device details
 device_lookup = {device['hostname']: device for device in ipf_devices}
 # endregion
@@ -392,7 +409,7 @@ print(f'Netbox device import complete. {duplicate} duplicates skipped, {nomatch}
 # region # Import IP Fabric Modules to NetBox
 # region ## Export list of modules from IP Fabric
 print('Getting modules from IP Fabric...')
-ipf_modules = IPFexporter.export_ipf_data('inventory/pn', ['pid', 'vendor', 'deviceSn', 'dscr', 'pid', 'sn', 'model'])
+ipf_modules = export_ipf_data('inventory/pn', ['pid', 'vendor', 'deviceSn', 'dscr', 'pid', 'sn', 'model'])
 print(f'Total modules fetched from IP Fabric: {len(ipf_modules)}')
 # endregion
 # region ## Transform module data

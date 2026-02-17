@@ -12,17 +12,34 @@ TO-DO:
 
 # region # Imports and setup
 from datetime import datetime
-import IPFloader
+from IPFloader import load_ipf_config
+from NetBoxloader import load_netbox_config
 import IPFexporter
-import NetBoxloader
 import requests
 
 starttime = datetime.now()
 # region ## Load IP Fabric configuration
-ipfbaseurl, ipftoken, ipfheaders, ipflimit = IPFloader.load_ipf_config()
+connected = False
+while connected == False:
+    try:
+        ipfbaseurl, ipftoken, ipfheaders, ipflimit = load_ipf_config()
+        connected = True
+    except Exception as e:
+        print(f"Error loading IP Fabric configuration: {e}")
+        print("Please ensure the .env file is configured correctly and try again.")
+        input("Press Enter to retry...")
+
 # endregion
 # region ## Load NetBox configuration
-netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = NetBoxloader.load_netbox_config()
+connected = False
+while connected == False:
+    try:
+        netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = load_netbox_config()
+        connected = True
+    except Exception as e:
+        print(f"Error loading NetBox configuration: {e}")
+        print("Please ensure the .env file is configured correctly and try again.")
+        input("Press Enter to retry...")
 # endregion
 # endregion
 

@@ -7,7 +7,6 @@ Date: January 16, 2025
 TO-DO:
  - Create log directory if not exists
  - Add logging to file
- - Add duration of import process
 '''
 
 # region # Imports and setup
@@ -73,7 +72,7 @@ taskduration = []
 vcSuccessCount = 0
 vcFailCount = 0
 for vc in vc_add:
-    taskstart = datetime.datetime.now()
+    taskstart = datetime.now()
     vc_master = vc
     payload = {
         'name': vc_master,
@@ -86,7 +85,7 @@ for vc in vc_add:
     else:
         vcFailCount += 1
     importCounter += 1
-    taskend = datetime.datetime.now()
+    taskend = datetime.now()
     taskduration.append((taskend - taskstart).total_seconds())
     remaining = sum(taskduration) / len(taskduration) * (len(vc_add) - importCounter)
     print(f'Import progress: [{"█" * int(importCounter/len(vc_add)*100):100}] {importCounter/len(vc_add)*100:.2f}% Complete - ({importCounter}/{len(vc_add)}) virtual chassis imported. Remaining: {remaining:.2f}s', end="\r")
@@ -102,7 +101,7 @@ for vc in vc_decom:
 # region # Summary and logging
 endtime = datetime.now()
 duration = endtime - starttime
-print(f'Virtual Chassis import process completed. Start time: {starttime}, End time: {endtime}, Duration: {duration}')
+print(f'\nVirtual Chassis import process completed. Start time: {starttime}, End time: {endtime}, Duration: {duration}')
 print(f'Total virtual chassis processed: {len(ipf_vc)}')
 print(f'Total virtual chassis to import: {len(vc_add)}')
 print(f'Total virtual chassis to decommission: {len(vc_decom)}')
