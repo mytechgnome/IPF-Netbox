@@ -52,7 +52,7 @@ def export_ipf_data(table_name, columns, snapshot="$last", attribute_filters=Non
     while r.json()['_meta']['count'] > ipfstart + ipflimit:
         ipfstart += ipflimit
         payload['pagination']['start'] = ipfstart
-        print(f'Fetching {table_name} data {ipfstart} to {ipfstart + ipflimit} from IP Fabric...')
+        print(f'Fetching {table_name} data {ipfstart} to {ipfstart + ipflimit} from IP Fabric...',end="\r")
         r = requests.post(url,headers=ipfheaders,json=payload,verify=False)
         ipf_data.extend(r.json()['data'])
     return ipf_data
