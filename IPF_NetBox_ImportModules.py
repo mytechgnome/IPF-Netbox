@@ -1,4 +1,11 @@
-# -*- coding: utf-8 -*-
+'''
+Import modules into NetBox using IPFModuleMapping.yaml to define module bay mapping
+
+Created by: Dan Kelcher
+Date: January 20th, 2025
+'''
+
+# region # Imports and setup
 import os
 import re
 import yaml
@@ -12,26 +19,17 @@ from datetime import datetime
 from dotenv import load_dotenv
 from difflib import get_close_matches
 
-
-# === Setup ===
 starttime = datetime.now()
-try:
-    currentdir = Path(__file__).parent
-except Exception:
-    currentdir = Path(os.getcwd())
-starttime_str = starttime.strftime("%Y-%m-%d_%H-%M-%S")
-log_dir = currentdir / 'Logs' / 'IPF_NetBox_ImportModules' / starttime_str
-log_dir.mkdir(parents=True, exist_ok=True)
 
-# .env and toggles
+# region ## Load .env and variables
 if not os.path.isfile('.env'):
     import CreateEnvFile; CreateEnvFile.create_env_file()
 load_dotenv(override=True)
 modulelnamesensitivity = float(os.getenv('modulelnamesensitivity', '0.8'))
 replicate_components = os.getenv('replicate_components', 'true').lower() == 'true'
 adopt_components     = os.getenv('adopt_components', 'true').lower() == 'true'
-
-# Config loaders
+# endregion
+# region ## Load IP Fabric configuration
 connected = False
 while connected == False:
     try:
@@ -41,7 +39,6 @@ while connected == False:
         print(f"Error loading IP Fabric configuration: {e}")
         print("Please ensure the .env file is configured correctly and try again.")
         input("Press Enter to retry...")
-
 # endregion
 # region ## Load NetBox configuration
 connected = False
@@ -53,20 +50,39 @@ while connected == False:
         print(f"Error loading NetBox configuration: {e}")
         print("Please ensure the .env file is configured correctly and try again.")
         input("Press Enter to retry...")
-
-# === YAML rules ===
+# endregion
+# region ## Define paths
+try:
+    currentdir = Path(__file__).parent
+except Exception:
+    currentdir = Path(os.getcwd())
+# endregion
+# region ## Create log directory
+starttime_str = starttime.strftime("%Y-%m-%d_%H-%M-%S")
+log_dir = currentdir / 'Logs' / 'IPF_NetBox_ImportModules' / starttime_str
+log_dir.mkdir(parents=True, exist_ok=True)
+# endregion
+# region ## Load module mapping rules from YAML
 yaml_path = currentdir / 'DataSources' / 'IPFModuleMapping.yaml'
 with yaml_path.open('r', encoding='utf-8') as f:
     module_rules = yaml.safe_load(f)
+# endregion
+# endregion
 
-# === Export data ===
+# region # Export Modules from IP Fabric and related data for transformation
+print("Exporting module and related data from IP Fabric and NetBox...")
 ipf_modules        = export_ipf_data('inventory/pn', ['hostname','name','dscr','pid','sn','deviceSn','model'])
+ipf_vcmembers      = export_ipf_data('platforms/stack/members', ['master','member','sn'])
 netbox_moduletypes = export_netbox_data('dcim/module-types')
 netbox_devices     = export_netbox_data('dcim/devices')
 netbox_module_bays = export_netbox_data('dcim/module-bays')
-ipf_vcmembers      = export_ipf_data('platforms/stack/members', ['master','member','sn'])
+print(f'Total modules fetched from IP Fabric: {len(ipf_modules)}')
+print(f'Total module bays fetched from NetBox: {len(netbox_module_bays)}')
+# endregion
 
-# === Helpers ===
+# region # Transform Modules and prepare for import
+print("Transforming module data and preparing for import...")
+# region ## Define helper functions for transformation and import
 prefix_map   = module_rules.get('globals', {}).get('prefix_map') or {}
 transforms   = module_rules.get('globals', {}).get('transforms') or []
 PID_ALIAS    = module_rules.get('globals', {}).get('pid_aliases') or {}
@@ -130,8 +146,8 @@ def classify_module(mod):
     for cat, kws in category_keywords.items():
         if any(k in combined for k in kws): return cat
     return 'other'
-
-# === Filter & VC member mark ===
+# endregion
+# region ## Filter out invalid or unmapped modules based on rules and heuristics
 valid_modules = []
 for i in ipf_modules:
     try:
@@ -143,7 +159,10 @@ for i in ipf_modules:
         valid_modules.append(i)
     except Exception:
         pass
-
+print(f'Total valid modules after filtering: {len(valid_modules)}')
+# endregion
+# region ## Enrich module data with VC member info where applicable
+print("Enriching module data...")
 vc_switch_regex     = re.compile(r"^Switch\s*-?\s*(\d+)\b", re.IGNORECASE)
 vc_member_from_port = re.compile(r"^(?:Te|Gi|Hu|Twe|Eth|Ethernet|TenGigabitEthernet|GigabitEthernet|HundredGigE|TwentyFiveGigE)(\d+)/", re.IGNORECASE)
 
@@ -153,8 +172,9 @@ for m in valid_modules:
     m_if = vc_member_from_port.match(name)
     memberid = m_sw.group(1) if m_sw else (m_if.group(1) if m_if else None)
     m['vcmembername'] = f"{m['hostname']}/{memberid}" if (memberid and int(memberid)>1) else None
+# endregion
 
-# === Indexes ===
+# region ## Build lookup tables for matching module types, devices, and module bays
 devices_by_name = { (d.get('name') or '').lower(): d.get('id') for d in netbox_devices if d.get('name') }
 
 moduletypes_by_part, moduletypes_by_model = {}, {}
@@ -175,7 +195,8 @@ for mb in netbox_module_bays:
         module_bays_by_device[did]['by_name'][nm.lower()] = mb
     if pos is not None:
         module_bays_by_device[did]['by_pos'][str(pos)] = mb
-
+# endregion
+# region ## Build lookup for VC member names to device IDs
 def normalize_pid(pid):
     p = (pid or '').strip().lower()
     if not p or p in ('unspecified','not'): return ''
@@ -234,8 +255,10 @@ def find_module_bay_id(device_id, category, raw_name):
             mb = by_name[m[0]]
             return mb['id']
     return None
+# endregion
 
-# === Buckets ===
+# region ## Classify modules into categories for processing and error handling
+print("Classifying modules into categories for processing...")
 module_buckets = {k: [] for k in category_defs.keys()}
 module_buckets['other'] = []
 for module in valid_modules:
@@ -244,7 +267,16 @@ for module in valid_modules:
     module_buckets[cat].append(module)
 
 error_rows = {k: ['hostname,name,pid,sn,dscr,module_type_id,device_id,module_bay_id,category,reason'] for k in module_buckets.keys()}
+print("Module classification complete. Categories and counts:")
+for cat, mods in module_buckets.items():
+    print(f"  {cat}: {len(mods)} modules")
+print(f'TOTAL: {len(valid_modules)} modules classified into {len(module_buckets)} categories')
+print(f'Module error count: {sum(len(rows)-1 for rows in error_rows.values())}')
+# endregion
+# endregion
 
+# region # Load data into NetBox
+# region ## Define main import function that processes modules, applies transformations, and prepares payloads for NetBox API
 def module_import(source_modules, bucket_name):
     modules_to_create = []
     for module in source_modules:
@@ -284,18 +316,28 @@ def module_import(source_modules, bucket_name):
             )
     return modules_to_create
 
-# === Non-SFP first ===
+# region ## Process each category bucket and prepare for import
+print("Processing modules and preparing for import...")
 full_modules = []
 for bucket in module_buckets.keys():
-    if bucket == 'sfp': continue
+    if bucket == 'sfp': # Skip SFPs, as modules could add SFP bays
+        continue
     mods_to_create = module_import(module_buckets[bucket], bucket)
     full_modules.extend([(bucket, m) for m in mods_to_create])
     with (log_dir / f'{bucket}_modules_with_errors.csv').open('w', encoding='utf-8') as f:
         f.write('\n'.join(error_rows[bucket]))
-
+print(f'Total modules prepared for import (excluding SFPs): {len(full_modules)}')
+print(f'Total SFP modules: {len(module_buckets.get("sfp", []))}')
+print(f'Total modules with errors (logged separately): {sum(len(rows)-1 for rows in error_rows.values())}')
+# endregion
+# region ## Define function to create modules in NetBox
 def create_modules_in_netbox(bucket_name, modules_to_create):
+    print(f"Creating {len(modules_to_create)} '{bucket_name}' modules in NetBox...")
+    importCounter = 0
+    taskduration = []
     url_base = f"{netboxbaseurl}dcim/modules/?replicate_components={str(replicate_components).lower()}&adopt_components={str(adopt_components).lower()}"
     for module in modules_to_create:
+        taskstart = datetime.now()
         payload = {
             'device':      module['device_id'],
             'module_bay':  module['module_bay_id'],
@@ -309,24 +351,38 @@ def create_modules_in_netbox(bucket_name, modules_to_create):
         if r.status_code != 201:
             with (log_dir / f'error_{bucket_name}_modules_import.csv').open('a', encoding='utf-8') as f:
                 f.write(f"{module['hostname']},{module['name']},{module['pid']},{module['sn']},{module['dscr']},{module['module_type_id']},{module['device_id']},{module['module_bay_id']},{bucket_name}:{r.text}\n")
+        taskend = datetime.now()
+        taskduration.append((taskend - taskstart).total_seconds())
+        importCounter += 1
+        remaining = sum(taskduration) / len(taskduration) * (len(modules_to_create) - importCounter)
+        print(f'Import progress: [{"█" * int(importCounter/len(modules_to_create)*100):100}] {importCounter/len(modules_to_create)*100:.2f}% Complete - ({importCounter}/{len(modules_to_create)}) {bucket_name} modules imported. Remaining: {remaining:.2f}s', end="\r")
+    print('\n')
+# endregion
 
+# region ## Create modules in NetBox, skipping SFPs for now
+print("Creating modules in NetBox (excluding SFPs)...")
 for bucket in module_buckets.keys():
-    if bucket == 'sfp': continue
+    taskstart = datetime.now()
+    if bucket == 'sfp': 
+        continue
     bucket_modules = [m for b,m in full_modules if b == bucket]
     create_modules_in_netbox(bucket, bucket_modules)
+print("Module creation complete.")
+# endregion
+# endregion
 
-# === VC member bay name updates (interfaces & StackPort only) ===
+# region # Post-import tasks and cleanup
+# region ## Update VC member module bays to have correct member number in name/label/position
+print("Updating VC member module bays to have correct member number in name/label/position...")
 vc_members = []
 for d in netbox_devices:
     nm = d.get('name') or ''
     m  = re.search(r'/([0-9]+)$', nm)
     if m:
         vc_members.append((d.get('id'), int(m.group(1))))
+# endregion
 
-import re
-import requests
-
-# Helper: rewrite the member digit in interface-like/StackPort strings
+# region ### Define helper function to rewrite member number in bay name/label/position based on regex patterns
 def _rewrite_member_string(s: str, member_number: int) -> str:
     if not s:
         return s
@@ -355,8 +411,9 @@ def _rewrite_member_string(s: str, member_number: int) -> str:
 
     # Otherwise, return unchanged (PSU/FAN/SUP bays or any non-interface naming)
     return s
+# endregion
 
-
+# region ### Main function to update VC member bay names/labels/positions based on member number
 def update_vc_bays(device_id: int, member_number: int):
     bays = export_netbox_data('dcim/module-bays', netboxlimit=netboxlimit, filters=[f'device_id={device_id}'])
     updates = 0
@@ -416,18 +473,35 @@ def update_vc_bays(device_id: int, member_number: int):
             f.write(e + "\n")
 
     return updates, skips, errors
+# endregion
 
+# region ### Apply VC member bay updates
+print(f'Updating VC member module bays for {len(vc_members)} devices...')
+taskduration = []
+vc_update_count = 0
 for did, member in vc_members:
+    taskstart = datetime.now()
     if member == 1: continue
     update_vc_bays(did, member)
+    taskend = datetime.now()
+    taskduration.append((taskend - taskstart).total_seconds())
+    vc_update_count += 1
+    remaining = sum(taskduration) / len(taskduration) * (len(vc_members) - vc_update_count)
+    print(f'VC bay update progress: [{"█" * int(vc_update_count/len(vc_members)*100):100}] {vc_update_count/len(vc_members)*100:.2f}% Complete - ({vc_update_count}/{len(vc_members)}) devices processed. Remaining: {remaining:.2f}s', end="\r")
+print("\nVC member bay updates complete.")
+# endregion
+# endregion
 
-# === SFP modules last ===
+
+# region ## Process SFP modules
+print("Processing SFP modules separately to handle potential new bays created by module imports...")
 sfp_modules_to_create = module_import(module_buckets.get('sfp', []), 'sfp')
 with (log_dir / 'sfp_modules_with_errors.csv').open('w', encoding='utf-8') as f:
     f.write('\n'.join(error_rows['sfp']))
 create_modules_in_netbox('sfp', sfp_modules_to_create)
+# endregion
 
-# === VC interface renames (post-SFP import) ===
+# region ### Update VC member interface names to have correct member number in name/label/position
 def update_vc_interfaces(device_id, member_number):
     interfaces = export_netbox_data('dcim/interfaces', netboxlimit=netboxlimit, filters=[f'device_id={device_id}'])
     for intf in interfaces:
@@ -445,12 +519,25 @@ def update_vc_interfaces(device_id, member_number):
             url     = f"{netboxbaseurl}dcim/interfaces/{intf['id']}/"
             payload = {'name': target, 'label': target, 'position': target}
             requests.patch(url, headers=netboxheaders, json=payload, verify=False)
-
+# endregion
+# region ### Apply VC member interface updates
+print(f'Updating VC member interfaces for {len(vc_members)} devices...')
+taskduration = []
+vc_update_count = 0
 for did, member in vc_members:
     if member == 1: continue
     update_vc_interfaces(did, member)
-
-# === Summary ===
+    taskend = datetime.now()
+    taskduration.append((taskend - taskstart).total_seconds())
+    vc_update_count += 1
+    remaining = sum(taskduration) / len(taskduration) * (len(vc_members) - vc_update_count)
+    print(f'VC interface update progress: [{"█" * int(vc_update_count/len(vc_members)*100):100}] {vc_update_count/len(vc_members)*100:.2f}% Complete - ({vc_update_count}/{len(vc_members)}) devices processed. Remaining: {remaining:.2f}s', end="\r")
+print("\nVC member interface updates complete.")
+# endregion
+# endregion
+# endregion
+# region # Summary
 endtime = datetime.now()
 duration = endtime - starttime
 print(f'Module import process completed. Start time: {starttime}, End time: {endtime}, Duration: {duration}')
+# endregion
