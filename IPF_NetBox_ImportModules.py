@@ -356,7 +356,6 @@ def create_modules_in_netbox(bucket_name, modules_to_create):
         importCounter += 1
         remaining = sum(taskduration) / len(taskduration) * (len(modules_to_create) - importCounter)
         print(f'Import progress: [{"█" * int(importCounter/len(modules_to_create)*100):100}] {importCounter/len(modules_to_create)*100:.2f}% Complete - ({importCounter}/{len(modules_to_create)}) {bucket_name} modules imported. Remaining: {remaining:.2f}s', end="\r")
-    print('\n')
 # endregion
 
 # region ## Create modules in NetBox, skipping SFPs for now
