@@ -7,7 +7,6 @@ Date: January 20, 2025
 NOTE Known Issues and Limitations:
 - Devices that are members of Virtual Chassis (VC) setups are split into individual device entries based on VC member data from IP Fabric.
 - Required fields such as Device Type, Device Role, and Site must exist in NetBox for successful import. Devices missing these fields are skipped, and a log of missing data is created.
-- Stack member interfaces are shown under the individual stack member device names, not under the master device. This could be intentional, as the physical interfaces belong to the stack members. (see bug about interface naming below)
 
 Bugs:
 - Stack members are not getting interfaces imported correctly, the interfaces should be shown as <member_number>/0/1, but are showing as 1/0/X for all members.

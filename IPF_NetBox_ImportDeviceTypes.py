@@ -21,13 +21,6 @@ Usage:
 
 Created by: Dan Kelcher
 Date: December 16, 2025
-
-TO-DO:
-- Add stack member device types to import # Done, need to test
-  - Pull stack member device types from IPF
-  - Identify models not present in the Device Inventory
-  - Lookup stack master in Device Inventory to find the vendor
-  - Add the stack member device types (model and vendor)to the import process
 """
 
 # region # Import and configure libraries
