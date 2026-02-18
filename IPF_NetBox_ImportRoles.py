@@ -13,9 +13,20 @@ from IPFexporter import export_ipf_data
 import requests
 from pathlib import Path
 import os
+import argparse
 from datetime import datetime
 
 starttime = datetime.now()
+
+# region ## Process arguments for branch selection
+ap = argparse.ArgumentParser(description="Import Sites from IP Fabric into NetBox")
+ap.add_argument("--branch", help="Create a NetBox branch for this import")
+args = ap.parse_args()
+if args.branch:
+    branchurl = f'?_branch={args.branch}'
+else:
+    branchurl = ''
+# endregion
 
 # region ## Load IP Fabric configuration
 connected = False

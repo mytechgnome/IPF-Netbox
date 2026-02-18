@@ -11,9 +11,20 @@ from NetBoxloader import load_netbox_config
 from IPFexporter import export_ipf_data
 from NetBoxexporter import export_netbox_data
 import requests
+import argparse
 from datetime import datetime
 
 starttime = datetime.now()
+
+# region ## Process arguments for branch selection
+ap = argparse.ArgumentParser(description="Import Sites from IP Fabric into NetBox")
+ap.add_argument("--branch", help="Create a NetBox branch for this import")
+args = ap.parse_args()
+if args.branch:
+    branchurl = f'?_branch={args.branch}'
+else:
+    branchurl = ''
+# endregion
 
 # region ## Load IP Fabric configuration
 connected = False
@@ -64,7 +75,7 @@ import_counter = 0
 import_success_count = 0
 import_fail_count = 0
 for vdc in ipf_vdcs:
-    url = f'{netboxbaseurl}dcim/virtual-device-contexts/'
+    url = f'{netboxbaseurl}dcim/virtual-device-contexts/{branchurl}'
     payload = {
         'device': vdc['device_id'],
         'name': vdc['vdc_name'],

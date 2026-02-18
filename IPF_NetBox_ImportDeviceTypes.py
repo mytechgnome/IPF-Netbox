@@ -29,6 +29,7 @@ import re
 import os
 import yaml
 import json
+import argparse
 import pandas as pd
 from git import Repo
 from pathlib import Path
@@ -41,6 +42,16 @@ from NetBoxloader import load_netbox_config
 from datetime import datetime
 
 starttime = datetime.now()
+
+# region ## Process arguments for branch selection
+ap = argparse.ArgumentParser(description="Import Sites from IP Fabric into NetBox")
+ap.add_argument("--branch", help="Create a NetBox branch for this import")
+args = ap.parse_args()
+if args.branch:
+    branchurl = f'?_branch={args.branch}'
+else:
+    branchurl = ''
+# endregion
 
 # region ## Load IP Fabric configuration
 connected = False
@@ -137,7 +148,7 @@ def add_device_type_components(yaml_object, objecttype, deviceID, netboxbaseurl,
     for componenttype in ['interface','front-port','rear-port','console-port','console-server-port','power-port','power-outlet','module-bay','device-bay']:
         componentkey = componenttype + 's'
         if componentkey in yaml_object:
-            url = f'{netboxbaseurl}dcim/{componenttype}-templates/'
+            url = f'{netboxbaseurl}dcim/{componenttype}-templates/{branchurl}'
             componentyaml = yaml_object.get(componentkey, [])
             for component in componentyaml:
                 component[f'{objecttype}_type'] = deviceID
@@ -211,13 +222,13 @@ for i in ipf_vendors:
 # region ## Load vendors into NetBox
 netbox_vendors = {}
 # region ### Get vendor already in NetBox
-url = f'{netboxbaseurl}dcim/manufacturers/'
+url = f'{netboxbaseurl}dcim/manufacturers/{branchurl}'
 r = requests.get(url,headers=netboxheaders,verify=False)
 for manufacturer in r.json()['results']:
     netbox_vendors[manufacturer['name'].lower()] = manufacturer['id']
 # endregion
 print('Importing manufacturers into NetBox...')
-url = f'{netboxbaseurl}dcim/manufacturers/'
+url = f'{netboxbaseurl}dcim/manufacturers/{branchurl}'
 vendorSuccessCount = 0
 for i in vendors['vendors']:
     r = requests.post(url,headers=netboxheaders,json=i,verify=False)
@@ -342,7 +353,7 @@ for i in ipf_models:
 # region #### Get Device Type YAML and prepare for import
         idx = basemodelnames.index(devicetypelibrary[0])
         devicetypelibrary = models[idx]
-        url = f'{netboxbaseurl}dcim/device-types/'
+        url = f'{netboxbaseurl}dcim/device-types/{branchurl}'
         yamlpath = os.path.join(repodir, 'device-types', vendorlibrary, devicetypelibrary)
         with open(yamlpath, 'r') as yaml_in:
             yaml_object = yaml.safe_load(yaml_in)
@@ -357,7 +368,9 @@ for i in ipf_models:
 # region #### Load Device Type to NetBox
 # region ##### Add Device Type to NetBox
         r = requests.post(url,headers=netboxheaders,json=jsondata,verify=False)
-        if r.status_code == 201:
+        if r.status_code != 201:
+            r = requests.patch(url,headers=netboxheaders,json=jsondata,verify=False)
+        if r.status_code == 201 or r.status_code == 200:
             deviceID = r.json()['id']
             slug = r.json()['slug']
 # endregion
@@ -382,7 +395,7 @@ for i in ipf_models:
                     image = [images[idx]]
                     imagepath = os.path.join(imagedir, image[0])
                     file = {i + '_image': (image[0], open(imagepath, 'rb'))}
-                    r = requests.patch(f'{netboxbaseurl}dcim/device-types/{deviceID}/',headers=netboxheadersimage,files=file,verify=False)
+                    r = requests.patch(f'{netboxbaseurl}dcim/device-types/{deviceID}/{branchurl}',headers=netboxheadersimage,files=file,verify=False)
 # endregion
             add_device_type_components(yaml_object, objecttype, deviceID, netboxbaseurl, netboxheaders)
 # region #### Log failed imports
@@ -447,7 +460,7 @@ for vendor in modules['modules']:
 modules = filtered_modules
 # endregion
 # region ### Get module profiles from NetBox
-url = f'{netboxbaseurl}dcim/module-type-profiles/'
+url = f'{netboxbaseurl}dcim/module-type-profiles/{branchurl}'
 r = requests.get(url=url,headers=netboxheaders,verify=False)
 for profile in r.json()['results']:
     if profile['name'] == 'Fan':
@@ -474,7 +487,6 @@ for i in modules['modules']:
     moduleslist = os.listdir(os.path.join(repodir, 'module-types', vendorlibrary))
     basemodulenames = [os.path.splitext(module.lower())[0] for module in moduleslist]
 # region ### Find Manufacture ID from NetBox
-    url = f'{netboxbaseurl}dcim/manufacturers/?slug={vendor}'
     vendor = vendorlibrary
     manufacturerID = netbox_vendors.get(vendor.lower(), None)
 # endregion
@@ -508,7 +520,7 @@ for i in modules['modules']:
 # endregion
 # endregion
 # region ## Load Module Type to NetBox
-            url = f'{netboxbaseurl}dcim/module-types/'
+            url = f'{netboxbaseurl}dcim/module-types/{branchurl}'
             jsondata = json.dumps(yaml_object)
             jsondata = json.loads(jsondata)
             r = requests.post(url,headers=netboxheaders,json=jsondata,verify=False)

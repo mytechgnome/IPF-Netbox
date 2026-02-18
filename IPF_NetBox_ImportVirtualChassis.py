@@ -15,9 +15,20 @@ from IPFexporter import export_ipf_data
 from NetBoxloader import load_netbox_config
 from NetBoxexporter import export_netbox_data
 import requests
+import argparse
 from datetime import datetime
 
 starttime = datetime.now()
+
+# region ## Process arguments for branch selection
+ap = argparse.ArgumentParser(description="Import Sites from IP Fabric into NetBox")
+ap.add_argument("--branch", help="Create a NetBox branch for this import")
+args = ap.parse_args()
+if args.branch:
+    branchurl = f'?_branch={args.branch}'
+else:
+    branchurl = ''
+# endregion
 
 # region ## Load IP Fabric configuration
 connected = False
@@ -83,7 +94,7 @@ for vc in existing_vc.keys():
 # endregion
 
 # region # Load Virtual Chassis into NetBox
-url = f'{netboxbaseurl}dcim/virtual-chassis/'
+url = f'{netboxbaseurl}dcim/virtual-chassis/{branchurl}'
 importCounter = 0
 taskduration = []
 vcSuccessCount = 0
@@ -110,7 +121,7 @@ for vc in vc_add:
 # endregion
 # region ## Flag VCs no longer in IP Fabric
 for vc in vc_decom:
-    url = f'{netboxbaseurl}dcim/virtual-chassis/{vc}/'
+    url = f'{netboxbaseurl}dcim/virtual-chassis/{vc}/{branchurl}'
     payload = {
         'description': f'Not present in IP Fabric - {starttime.strftime("%Y-%m-%d %H:%M:%S")}'
     }

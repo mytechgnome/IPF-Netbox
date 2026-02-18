@@ -23,9 +23,20 @@ import os
 from pathlib import Path
 from datetime import datetime
 import re
+import argparse
 from difflib import get_close_matches
 
 starttime = datetime.now()
+
+# region ## Process arguments for branch selection
+ap = argparse.ArgumentParser(description="Import Sites from IP Fabric into NetBox")
+ap.add_argument("--branch", help="Create a NetBox branch for this import")
+args = ap.parse_args()
+if args.branch:
+    branchurl = f'?_branch={args.branch}'
+else:
+    branchurl = ''
+# endregion
 
 # region ## Load IP Fabric configuration
 connected = False
@@ -336,7 +347,7 @@ vc_members = []
 taskduration = []
 # endregion
 # region ## Import devices
-url = f'{netboxbaseurl}dcim/devices/'
+url = f'{netboxbaseurl}dcim/devices/{branchurl}'
 for device in transform_list:
     taskstart = datetime.now()
     devicename       = device['hostname']
@@ -364,7 +375,7 @@ for device in transform_list:
         'comments': comments
     }
     if device['new'] == False:
-        url = f'{netboxbaseurl}dcim/devices/{device["nb_id"]}/'
+        url = f'{netboxbaseurl}dcim/devices/{device["nb_id"]}/{branchurl}'
         r = requests.patch(url,headers=netboxheaders,json=payload,verify=False)
     else:
         r = requests.post(url,headers=netboxheaders,json=payload,verify=False)
@@ -397,7 +408,7 @@ print(f'Updating Virtual Chassis masters with member IDs.')
 for i in vc_masters:
     vc = int(i[0])
     master = int(i[1])
-    url = f'{netboxbaseurl}dcim/virtual-chassis/{vc}/'
+    url = f'{netboxbaseurl}dcim/virtual-chassis/{vc}/{branchurl}'
     payload = {
         'master': master
     }
@@ -424,7 +435,7 @@ def update_vc_members(update_type, device_id, member_number):
             prefix = current_name.group(1)
             suffix = current_name.group(3)
             new_name = f'{prefix}{member_number}{suffix}'
-            url = f'{netboxbaseurl}dcim/{update_type}/{object["id"]}/'
+            url = f'{netboxbaseurl}dcim/{update_type}/{object["id"]}/{branchurl}'
             payload = {
                 'name': new_name,
                 'display': new_name

@@ -16,8 +16,20 @@ from IPFloader import load_ipf_config
 from NetBoxloader import load_netbox_config
 from IPFexporter import export_ipf_data
 import requests
+import argparse
 
 starttime = datetime.now()
+
+# region ## Process arguments for branch selection
+ap = argparse.ArgumentParser(description="Import Sites from IP Fabric into NetBox")
+ap.add_argument("--branch", help="Create a NetBox branch for this import")
+args = ap.parse_args()
+if args.branch:
+    branchurl = f'?_branch={args.branch}'
+else:
+    branchurl = ''
+# endregion
+
 # region ## Load IP Fabric configuration
 connected = False
 while connected == False:
@@ -53,7 +65,7 @@ print(f'Total sites fetched from IP Fabric: {len(ipf_sites)}')
 # endregion
 
 # region # Load Sites into NetBox
-url = f'{netboxbaseurl}dcim/sites/'
+url = f'{netboxbaseurl}dcim/sites/{branchurl}'
 siteSuccessCount = 0
 siteFailCount = 0
 for site in ipf_sites:

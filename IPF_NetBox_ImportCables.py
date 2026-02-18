@@ -21,12 +21,23 @@ import requests
 import pandas as pd
 import json
 import os
+import argparse
 from pathlib import Path
 import InterfaceNameNormalization as ifn
 from IPFexporter import export_ipf_data
 from datetime import datetime
 
 starttime = datetime.now()
+
+# region ## Process arguments for branch selection
+ap = argparse.ArgumentParser(description="Import Sites from IP Fabric into NetBox")
+ap.add_argument("--branch", help="Create a NetBox branch for this import")
+args = ap.parse_args()
+if args.branch:
+    branchurl = f'?_branch={args.branch}'
+else:
+    branchurl = ''
+# endregion
 
 # region ## Check for NetBoxCableTypeMappings.json file
 try:
@@ -78,7 +89,10 @@ print(f'Total cables fetched from IP Fabric: {len(ipf_connections)}')
 # region ## Get interfaces from NetBox to build a lookup table
 netbox_interfaces = []
 netboxLimit = 1000
-url = f'{netboxbaseurl}dcim/interfaces/?limit={netboxLimit}'
+if branchurl:
+    url = f'{netboxbaseurl}dcim/interfaces/{branchurl}&limit={netboxLimit}'
+else:
+    url = f'{netboxbaseurl}dcim/interfaces/?limit={netboxLimit}'
 r = requests.get(url,headers=netboxheaders,verify=False)
 loopcounter = 1
 print(f'Fetching interfaces {(loopcounter - 1) * netboxLimit} to {loopcounter * netboxLimit} from NetBox...')
@@ -211,7 +225,7 @@ print(f'Total cables matched with NetBox interfaces and cable types: {len(cabled
 
 # region # Load cables into NetBox
 print(f'Importing cables into NetBox...')
-url = f'{netboxbaseurl}dcim/cables/'
+url = f'{netboxbaseurl}dcim/cables/{branchurl}'
 taskduration = []
 cables_updated = 0
 for i in cabledata:

@@ -10,6 +10,7 @@ import os
 import re
 import yaml
 import requests
+import argparse
 from IPFexporter import export_ipf_data
 from IPFloader import load_ipf_config
 from NetBoxloader import load_netbox_config
@@ -20,6 +21,16 @@ from dotenv import load_dotenv
 from difflib import get_close_matches
 
 starttime = datetime.now()
+
+# region ## Process arguments for branch selection
+ap = argparse.ArgumentParser(description="Import Sites from IP Fabric into NetBox")
+ap.add_argument("--branch", help="Create a NetBox branch for this import")
+args = ap.parse_args()
+if args.branch:
+    branchurl = f'?_branch={args.branch}'
+else:
+    branchurl = ''
+# endregion
 
 # region ## Load .env and variables
 if not os.path.isfile('.env'):
@@ -335,7 +346,10 @@ def create_modules_in_netbox(bucket_name, modules_to_create):
     print(f"Creating {len(modules_to_create)} '{bucket_name}' modules in NetBox...")
     importCounter = 0
     taskduration = []
-    url_base = f"{netboxbaseurl}dcim/modules/?replicate_components={str(replicate_components).lower()}&adopt_components={str(adopt_components).lower()}"
+    if branchurl:
+        url_base = f"{netboxbaseurl}dcim/modules/{branchurl}&replicate_components={str(replicate_components).lower()}&adopt_components={str(adopt_components).lower()}"
+    else:
+        url_base = f"{netboxbaseurl}dcim/modules/?replicate_components={str(replicate_components).lower()}&adopt_components={str(adopt_components).lower()}"
     for module in modules_to_create:
         taskstart = datetime.now()
         payload = {
@@ -460,7 +474,7 @@ def update_vc_bays(device_id: int, member_number: int):
             skips += 1
             continue
 
-        url = f"{netboxbaseurl}dcim/module-bays/{mb['id']}/"
+        url = f"{netboxbaseurl}dcim/module-bays/{mb['id']}/{branchurl}"
         r = requests.patch(url, headers=netboxheaders, json=payload, verify=False)
         if r.status_code == 200:
             updates += 1
@@ -519,7 +533,7 @@ def update_vc_interfaces(device_id, member_number):
         else:
             continue
         if target and target != name:
-            url     = f"{netboxbaseurl}dcim/interfaces/{intf['id']}/"
+            url     = f"{netboxbaseurl}dcim/interfaces/{intf['id']}/{branchurl}"
             payload = {'name': target, 'label': target, 'position': target}
             requests.patch(url, headers=netboxheaders, json=payload, verify=False)
 # endregion

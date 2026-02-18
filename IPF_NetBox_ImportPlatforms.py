@@ -10,9 +10,20 @@ from IPFloader import load_ipf_config
 from NetBoxloader import load_netbox_config
 from IPFexporter import export_ipf_data
 import requests
+import argparse
 from datetime import datetime
 
 starttime = datetime.now()
+
+# region ## Process arguments for branch selection
+ap = argparse.ArgumentParser(description="Import Sites from IP Fabric into NetBox")
+ap.add_argument("--branch", help="Create a NetBox branch for this import")
+args = ap.parse_args()
+if args.branch:
+    branchurl = f'?_branch={args.branch}'
+else:
+    branchurl = ''
+# endregion
 
 # region ## Load IP Fabric configuration
 connected = False
@@ -47,7 +58,7 @@ print(f'Total platforms fetched from IP Fabric: {len(ipf_platforms)}')
 # region # Transform Platforms Vendor to NetBox Manufacturers
 # region ## Get Manufacturers from NetBox to build a lookup table
 netbox_manufacturers = []
-url = f'{netboxbaseurl}dcim/manufacturers/'
+url = f'{netboxbaseurl}dcim/manufacturers/{branchurl}'
 r = requests.get(url,headers=netboxheaders,verify=False)
 netbox_manufacturers = r.json()['results']
 # endregion
@@ -59,7 +70,7 @@ for manufacturer in netbox_manufacturers:
 # endregion
 
 # region # Load Platforms into NetBox
-url = f'{netboxbaseurl}dcim/platforms/'
+url = f'{netboxbaseurl}dcim/platforms/{branchurl}'
 platformSuccessCount = 0
 platformFailCount = 0
 for platform in ipf_platforms:

@@ -1,5 +1,5 @@
 .env
-playground.py
 /DataSources/DeviceTypeLibraryRepo/
 /Logs/
 __pycache__/
+playground*

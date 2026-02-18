@@ -14,9 +14,21 @@ from IPFloader import load_ipf_config
 from NetBoxloader import load_netbox_config
 from IPFexporter import export_ipf_data
 import requests
+import argparse
 from datetime import datetime
 
 starttime = datetime.now()
+
+# region ## Process arguments for branch selection
+ap = argparse.ArgumentParser(description="Import Sites from IP Fabric into NetBox")
+ap.add_argument("--branch", help="Create a NetBox branch for this import")
+args = ap.parse_args()
+if args.branch:
+    branchurl = f'?_branch={args.branch}'
+else:
+    branchurl = ''
+# endregion
+
 
 # region ## Load IP Fabric configuration
 connected = False
@@ -53,7 +65,7 @@ print(f'Total SSIDs fetched from IP Fabric: {len(ipf_ssids)}')
 # endregion
 
 # region # Load SSIDs into NetBox
-url = f'{netboxbaseurl}wireless/wireless-lans/'
+url = f'{netboxbaseurl}wireless/wireless-lans/{branchurl}'
 ssidSuccessCount = 0
 ssidFailCount = 0
 for ssid in ipf_ssids:
