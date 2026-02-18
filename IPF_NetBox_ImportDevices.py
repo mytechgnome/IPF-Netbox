@@ -34,8 +34,10 @@ ap.add_argument("--branch", help="Create a NetBox branch for this import")
 args = ap.parse_args()
 if args.branch:
     branchurl = f'?_branch={args.branch}'
+    schemaID = args.branch
 else:
     branchurl = ''
+    schemaID = None
 # endregion
 
 # region ## Load IP Fabric configuration
@@ -111,7 +113,7 @@ ipf_pns = export_ipf_data('inventory/pn', ['pid', 'sn'])
 # endregion
 # region ### Match Device Types to NetBox Device Types
 # region #### Get Device Types from NetBox
-netbox_device_types = export_netbox_data('dcim/device-types')
+netbox_device_types = export_netbox_data('dcim/device-types',filters={'_branch='+schemaID} if schemaID else None)
 # endregion
 # region #### Build Device Type Lookup Dictionary
 device_type_lookup = {}
@@ -119,7 +121,7 @@ for device_type in netbox_device_types:
     device_type_lookup[device_type['part_number']] = device_type['id']
 # region ### Match Device Roles to NetBox Device Roles
 # region #### Get Device Roles from NetBox
-netbox_device_roles = export_netbox_data('dcim/device-roles')
+netbox_device_roles = export_netbox_data('dcim/device-roles',filters={'_branch='+schemaID} if schemaID else None)
 # endregion
 # region #### Build Device Role Lookup Dictionary
 device_role_lookup = {}
@@ -129,7 +131,7 @@ for device_role in netbox_device_roles:
 # endregion
 # region ### Match Site Names to Site IDs
 # region #### Get Sites from NetBox 
-netbox_sites = export_netbox_data('dcim/sites')
+netbox_sites = export_netbox_data('dcim/sites',filters={'_branch='+schemaID} if schemaID else None)
 # endregion
 # region #### Build Site Lookup Dictionary
 site_lookup = {}
@@ -139,7 +141,7 @@ for netbox_site in netbox_sites:
 # endregion
 # region ### Match Platform Names to NetBox IDs
 # region #### Get Platforms from NetBox
-netbox_platforms = export_netbox_data('dcim/platforms')
+netbox_platforms = export_netbox_data('dcim/platforms',filters={'_branch='+schemaID} if schemaID else None)
 # endregion
 # region #### Build Platform Lookup Dictionary
 platform_lookup = {}
@@ -149,7 +151,7 @@ for netbox_platform in netbox_platforms:
 # endregion
 # region ### Match Virtual Chassis Masters to NetBox VC IDs
 # region #### Get Virtual Chassis from NetBox
-netbox_vc = export_netbox_data('dcim/virtual-chassis')
+netbox_vc = export_netbox_data('dcim/virtual-chassis',filters={'_branch='+schemaID} if schemaID else None)
 # endregion
 # region #### Build VC Lookup Dictionary
 vc_lookup = {}
@@ -273,7 +275,7 @@ for i in transform_list:
 print(f'Processed {len(transform_list)} devices.')
 # endregion
 # region ## Check if devices already exist in NetBox
-existing_devices = export_netbox_data('dcim/devices')
+existing_devices = export_netbox_data('dcim/devices',filters={'_branch='+schemaID} if schemaID else None)
 existing_device_names = [d['name'] for d in existing_devices]
 for device in transform_list:
     device['new'] = None
@@ -425,7 +427,7 @@ def update_vc_members(update_type, device_id, member_number):
     Errors = []
     UpdateCount = 0
     FailCount = 0
-    objects = export_netbox_data(f'dcim/{update_type}', netboxlimit=netboxlimit, filters=[f'device_id={device_id}'])
+    objects = export_netbox_data(f'dcim/{update_type}', netboxlimit=netboxlimit, filters=[f'device_id={device_id}', '_branch='+schemaID] if schemaID else [f'device_id={device_id}'])
     for object in objects:
         name = object['name']
         current_name = re.match(r"^(\w*)(\d+)([\/\{\w+\}]{1,})$", name)

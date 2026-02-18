@@ -26,8 +26,10 @@ ap.add_argument("--branch", help="Create a NetBox branch for this import")
 args = ap.parse_args()
 if args.branch:
     branchurl = f'?_branch={args.branch}'
+    schemaID = args.branch
 else:
     branchurl = ''
+    schemaID = None
 # endregion
 
 # region ## Load IP Fabric configuration
@@ -72,7 +74,7 @@ print(f'Total virtual chassis fetched from IP Fabric: {len(ipf_vc)}')
 
 # region # Transform VC members from IP Fabric
 # region ## Get existing VC configuration
-nb_vc = export_netbox_data('dcim/virtual-chassis')
+nb_vc = export_netbox_data('dcim/virtual-chassis', filters={'_branch='+schemaID} if schemaID else None)
 existing_vc = {}
 for i in nb_vc:
     existing_vc[i['name'].lower()] = i['id']

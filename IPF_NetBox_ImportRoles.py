@@ -24,8 +24,10 @@ ap.add_argument("--branch", help="Create a NetBox branch for this import")
 args = ap.parse_args()
 if args.branch:
     branchurl = f'?_branch={args.branch}'
+    schemaID = args.branch
 else:
     branchurl = ''
+    schemaID = None
 # endregion
 
 # region ## Load IP Fabric configuration
@@ -85,7 +87,7 @@ except FileNotFoundError:
 # endregion
 
 # region # Load Device Roles into NetBox
-url = f'{netboxbaseurl}dcim/device-roles/'
+url = f'{netboxbaseurl}dcim/device-roles/{branchurl}'
 roleSuccessCount = 0
 roleFailCount = 0
 for role in devType:

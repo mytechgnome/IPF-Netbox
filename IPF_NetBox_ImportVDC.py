@@ -22,8 +22,10 @@ ap.add_argument("--branch", help="Create a NetBox branch for this import")
 args = ap.parse_args()
 if args.branch:
     branchurl = f'?_branch={args.branch}'
+    schemaID = args.branch
 else:
     branchurl = ''
+    schemaID = None
 # endregion
 
 # region ## Load IP Fabric configuration
@@ -58,7 +60,7 @@ ipf_vdcs = export_ipf_data('platforms/devices', ['hostname', 'contextName', 'con
 # region # Transform data
 # region ## Get existing devices from NetBox to build a lookup table
 netbox_devices = []
-netbox_devices = export_netbox_data('dcim/devices')
+netbox_devices = export_netbox_data('dcim/devices',filters={'_branch='+schemaID} if schemaID else None)
 # endregion
 # region ## Build Device Lookup Dictionary
 for vdc in ipf_vdcs:
