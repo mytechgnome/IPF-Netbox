@@ -1,19 +1,10 @@
-
-# IPF → NetBox module/bay name matching rules
-# Notes:
-# - All regexes use named groups (e.g., (?P<pos>...), (?P<slot>...)) you can pull out during matching.
-# - "transforms" run on the IPF 'name' before any matching (e.g., strip "Switch N - ").
-# - "synonyms" are candidate NetBox bay name templates tried in order; {POS}/{SLOT}/{PATH}/{CANON_PREFIX} are tokens to substitute.
-
 version: 1
 schema: ipf-netbox-module-mapping
-
 globals:
-  # Interface prefix canonicalization (for SFP ports, etc.)
   prefix_map:
-    Te:  TenGigabitEthernet
-    Gi:  GigabitEthernet
-    Hu:  HundredGigE
+    Te: TenGigabitEthernet
+    Gi: GigabitEthernet
+    Hu: HundredGigE
     Twe: TwentyFiveGigE
     Eth: Ethernet
     Ethernet: Ethernet
@@ -21,35 +12,43 @@ globals:
     GigabitEthernet: GigabitEthernet
     HundredGigE: HundredGigE
     TwentyFiveGigE: TwentyFiveGigE
-
-  # Generic transforms applied to IPF names before matching
   transforms:
-    # Strip stack/member lead-ins used by IPF (e.g., "Switch 2 - Power Supply A")
     - regex: '^\s*Switch\s*\d+\s*[- ]\s*'
       replace: ''
-    # Collapse multiple spaces and normalize hyphens
     - regex: '\s+'
       replace: ' '
     - regex: 'PSU[-\s]?'
       replace: 'PSU'
     - regex: 'PS[-\s]?'
       replace: 'PS'
+    # C9500 wording
+    - regex: 'Power\s*Supply\s*Module\s*'
+      replace: 'Power Supply '
+    # zero-indexed fan trays
+    - regex: 'Fan\s*Tray\s*0'
+      replace: 'Fan 1'
+  # Keep variants exact unless you add entries here:
+  pid_aliases: {}
+  # Fallbacks only when PID is missing/Unspecified
+  dscr_to_pid:
+    '1000BaseSX SFP': GLC-SX-MMD
+    '1000BaseLX SFP': GLC-LH-SMD
+    '1000BaseT': GLC-TE
+    'SFP-10GBase-LR': SFP-10G-LR
+    'SFP-10GBase-SR': SFP-10G-SR
+    'QSFP 40GE LR4': QSFP-40G-LR4
+    'QSFP-40G-SR-BD': QSFP-40G-SR-BD
 
 categories:
-
   power:
     keywords: [power, psu, supply]
     ipf_patterns:
-      # Lettered bays (A/B) and numeric (0/1/2) variants
       - '^(?:Power\s*Supply\s*)(?P<pos>[A-Za-z0-9]+)$'
       - '^(?:PSU)(?P<pos>[A-Za-z0-9]+)$'
       - '^(?:PS)(?P<pos>[A-Za-z0-9]+)$'
-      # Nexus/Catalyst chassis “Slot X” supplies
+      - '^(?:Power\s*Supply\s*(?:Module\s*)?(?P<slot>\d+))$'
       - '^(?:Slot\s*(?P<slot>\d+))$'
-    pos_normalization:
-      # Uppercase letters; keep numerics as-is
-      letter_case: upper
-    synonyms:   # Ordered NetBox bay name candidates (observed variants)
+    synonyms:
       - 'Power Supply {POS}'
       - 'PS-{POS}'
       - 'PS{POS}'
@@ -60,24 +59,14 @@ categories:
       - 'PS{SLOT}'
       - 'PSU-{SLOT}'
       - 'PSU{SLOT}'
-    notes:
-      - 'NetBox bays present as PS-A, PS-B, PS1, PS2, PS-0/PS-1, PSU0/PSU1/PSU2; include all alias forms.'
-    examples:
-      - ipf: 'Switch 1 - Power Supply A'
-        netbox_candidates: ['Power Supply A','PS-A','PSA','PSUA','PSU-A']
-      - ipf: 'Power Supply 1'
-        netbox_candidates: ['Power Supply 1','PS-1','PS1','PSU-1','PSU1']
-      - ipf: 'Slot 33'
-        netbox_candidates: ['PS-33','PSU33','Power Supply 33']
+      - 'Power Supply Module {SLOT}'
 
   network:
     keywords: [uplink, network module, nm, fabric card, fab, fru]
     ipf_patterns:
-      # IPF often: "Switch N FRU Uplink Module X" or "Switch N Uplink Module X"
-      - '^(?:FRU\s*)?(?:Uplink|Network)\s*Module\s*(?P<pos>\d+)$'
-      # Nexus fabric/line-card style module locations: "Slot X"
+      - '^(?:FRU\s*)?Uplink\s*Module\s*(?P<pos>\d+)$'
+      - '^Network\s*Module\s*(?P<pos>\d+)$'
       - '^(?:Slot\s*(?P<slot>\d+))$'
-      # Some descriptions are "Fabric card module" with the slot captured separately
     synonyms:
       - 'Uplink Module {POS}'
       - 'Network Module {POS}'
@@ -89,13 +78,13 @@ categories:
     keywords: [fan, fan tray]
     ipf_patterns:
       - '^(?:Fan\s*(?P<num>\d+))$'
-      - '^(?:Slot\s*(?P<slot>\d+))$'  # e.g., N77K “Slot 37/38/39” fan positions
+      - '^(?:Slot\s*(?P<slot>\d+))$'
     synonyms:
       - 'Fan {NUM}'
       - 'FAN {NUM}'
       - 'Slot {SLOT}'
-    notes:
-      - 'Nexus 7700 exports show “Slot 37/38/39” for fan modules; others label bays as Fan 1-3.'
+      - 'Fan Module {NUM}'
+      - 'Fan Tray {NUM}'
 
   supervisor:
     keywords: [supervisor, sup]
@@ -105,15 +94,14 @@ categories:
     synonyms:
       - 'Supervisor {SLOT}'
       - 'Slot {SLOT}'
-    notes:
-      - 'NetBox bays often use “Supervisor X”; IPF logs may say “Module X” or “Slot X”. Map slot → supervisor number.'
+      - 'SUP {SLOT}'
 
   disk:
     keywords: [disk, ssd, hdd, hd, usbflash]
     ipf_patterns:
-      - '^(?:Disk(?P<num>\d+)\s*SATA)$'          # e.g., "Disk0 SATA"
-      - '^(?:HD(?P<num>\d+))$'                   # e.g., "HD1"
-      - '^(?:usbflash(?P<num>\d+)(?:-\d+)?)$'    # e.g., "usbflash1-4"
+      - '^(?:Disk(?P<num>\d+)\s*SATA)$'
+      - '^(?:HD(?P<num>\d+))$'
+      - '^(?:usbflash(?P<num>\d+)(?:-\d+)?)$'
     synonyms:
       - 'Disk {NUM}'
       - 'Disk{NUM}'
@@ -121,8 +109,6 @@ categories:
       - 'HD{NUM}'
       - 'USB Flash {NUM}'
       - 'USBFlash {NUM}'
-    notes:
-      - 'Disk rows in errors include “Switch N Disk0 SATA” and “HD1”. Strip the lead-in and match disk/HD numerics.'
 
   stack:
     keywords: [stack, stackwise, stackport]
@@ -131,27 +117,16 @@ categories:
     synonyms:
       - 'StackPort{PATH}'
       - 'Stack Port {PATH}'
-    notes:
-      - 'StackWise on Catalyst typically uses “StackPort1/1”; NetBox bays may include a space variant.'
 
   sfp:
     keywords: [sfp, gbic, glc, qsfp, transceiver]
     ipf_patterns:
-      # Port-style names (abbrev or long-form)
       - '^(?P<pfx>Te|Gi|Hu|Twe|Eth|Ethernet|TenGigabitEthernet|GigabitEthernet|HundredGigE|TwentyFiveGigE)(?P<path>\d+(?:/\d+)+)$'
-      # WLC subslot style (e.g., "subslot 0/0 transceiver 1")
       - '^(?:subslot\s*\d+/\d+\s*transceiver\s*(?P<num>\d+))$'
     synonyms:
       - '{CANON_PREFIX}{PATH}'
-      - 'Ethernet{PATH}'    # many N9K bays are kept as "Ethernet1/xx"
+      - 'Ethernet{PATH}'
       - 'TenGigabitEthernet{PATH}'
       - 'GigabitEthernet{PATH}'
       - 'HundredGigE{PATH}'
       - 'TwentyFiveGigE{PATH}'
-    examples:
-      - ipf: 'Te1/1/8'
-        netbox_candidates: ['TenGigabitEthernet1/1/8']
-      - ipf: 'Twe2/0/48'
-        netbox_candidates: ['TwentyFiveGigE2/0/48']
-      - ipf: 'HundredGigE1/0/50'
-        netbox_candidates: ['HundredGigE1/0/50']

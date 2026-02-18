@@ -15,18 +15,29 @@ TO-DO:
 '''
 
 # region # Imports and setup
-import IPFloader 
-import NetBoxloader
+from IPFloader import load_ipf_config
+from NetBoxloader import load_netbox_config
 import requests
 import pandas as pd
 import json
 import os
+import argparse
 from pathlib import Path
 import InterfaceNameNormalization as ifn
-import IPFexporter
-import datetime
+from IPFexporter import export_ipf_data
+from datetime import datetime
 
-starttime = datetime.datetime.now()
+starttime = datetime.now()
+
+# region ## Process arguments for branch selection
+ap = argparse.ArgumentParser(description="Import Sites from IP Fabric into NetBox")
+ap.add_argument("--branch", help="Create a NetBox branch for this import")
+args = ap.parse_args()
+if args.branch:
+    branchurl = f'?_branch={args.branch}'
+else:
+    branchurl = ''
+# endregion
 
 # region ## Check for NetBoxCableTypeMappings.json file
 try:
@@ -45,15 +56,32 @@ print(f'Creating log directory at {log_dir}')
 os.makedirs(log_dir, exist_ok=True)
 # endregion
 # region ## Load IP Fabric configuration
-ipfbaseurl, ipftoken, ipfheaders, ipflimit = IPFloader.load_ipf_config()
+connected = False
+while connected == False:
+    try:
+        ipfbaseurl, ipftoken, ipfheaders, ipflimit = load_ipf_config()
+        connected = True
+    except Exception as e:
+        print(f"Error loading IP Fabric configuration: {e}")
+        print("Please ensure the .env file is configured correctly and try again.")
+        input("Press Enter to retry...")
+
 # endregion
 # region ## Load NetBox configuration
-netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = NetBoxloader.load_netbox_config()
+connected = False
+while connected == False:
+    try:
+        netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = load_netbox_config()
+        connected = True
+    except Exception as e:
+        print(f"Error loading NetBox configuration: {e}")
+        print("Please ensure the .env file is configured correctly and try again.")
+        input("Press Enter to retry...")
 # endregion
 # endregion
 
 # region # Export connectivity matrix from IP Fabric
-ipf_connections = IPFexporter.export_ipf_data('interfaces/connectivity-matrix', ['siteName', 'localHost', 'localInt', 'localMedia', 'remoteHost', 'remoteInt', 'remoteMedia', 'protocol'], filters={"protocol": ['like', 'cdp']})
+ipf_connections = export_ipf_data('interfaces/connectivity-matrix', ['siteName', 'localHost', 'localInt', 'localMedia', 'remoteHost', 'remoteInt', 'remoteMedia', 'protocol'], filters={"protocol": ['like', 'cdp']})
 print(f'Total cables fetched from IP Fabric: {len(ipf_connections)}')
 # endregion
 
@@ -61,7 +89,10 @@ print(f'Total cables fetched from IP Fabric: {len(ipf_connections)}')
 # region ## Get interfaces from NetBox to build a lookup table
 netbox_interfaces = []
 netboxLimit = 1000
-url = f'{netboxbaseurl}dcim/interfaces/?limit={netboxLimit}'
+if branchurl:
+    url = f'{netboxbaseurl}dcim/interfaces/{branchurl}&limit={netboxLimit}'
+else:
+    url = f'{netboxbaseurl}dcim/interfaces/?limit={netboxLimit}'
 r = requests.get(url,headers=netboxheaders,verify=False)
 loopcounter = 1
 print(f'Fetching interfaces {(loopcounter - 1) * netboxLimit} to {loopcounter * netboxLimit} from NetBox...')
@@ -194,11 +225,11 @@ print(f'Total cables matched with NetBox interfaces and cable types: {len(cabled
 
 # region # Load cables into NetBox
 print(f'Importing cables into NetBox...')
-url = f'{netboxbaseurl}dcim/cables/'
+url = f'{netboxbaseurl}dcim/cables/{branchurl}'
 taskduration = []
 cables_updated = 0
 for i in cabledata:
-    taskstart = datetime.datetime.now()
+    taskstart = datetime.now()
     cable_payload = {
         "type": i["cable"],
         "a_terminations": [
@@ -226,12 +257,12 @@ for i in cabledata:
         #print(f'Failed to create cable between {i["localHost"]} and {i["remoteHost"]}. Status code: {r.status_code}')
         continue
     cables_updated += 1
-    taskend = datetime.datetime.now()
+    taskend = datetime.now()
     taskduration.append((taskend - taskstart).total_seconds())
     remaining = sum(taskduration) / len(taskduration) * (len(cabledata) - cables_updated)
     print(f'Import progress: [{"█" * int(cables_updated/len(cabledata)*100):100}]{cables_updated/len(cabledata)*100:.2f}% Complete - ({cables_updated}/{len(cabledata)}) Cables imported. Remaining: {remaining:.2f}s', end="\r")
 print(f'\nCable import process completed.')
 # endregion
-endtime = datetime.datetime.now()
+endtime = datetime.now()
 duration = endtime - starttime
 print(f'Cable import process completed. Start time: {starttime}, End time: {endtime}, Duration: {duration}')

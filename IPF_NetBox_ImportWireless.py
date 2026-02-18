@@ -10,24 +10,53 @@ TO-DO:
 '''
 
 # region # Imports and setup
-import IPFloader
-import IPFexporter
-import NetBoxloader
+from IPFloader import load_ipf_config
+from NetBoxloader import load_netbox_config
+from IPFexporter import export_ipf_data
 import requests
-import datetime
+import argparse
+from datetime import datetime
 
-starttime = datetime.datetime.now()
+starttime = datetime.now()
+
+# region ## Process arguments for branch selection
+ap = argparse.ArgumentParser(description="Import Sites from IP Fabric into NetBox")
+ap.add_argument("--branch", help="Create a NetBox branch for this import")
+args = ap.parse_args()
+if args.branch:
+    branchurl = f'?_branch={args.branch}'
+else:
+    branchurl = ''
+# endregion
+
 
 # region ## Load IP Fabric configuration
-ipfbaseurl, ipftoken, ipfheaders, ipflimit = IPFloader.load_ipf_config()
+connected = False
+while connected == False:
+    try:
+        ipfbaseurl, ipftoken, ipfheaders, ipflimit = load_ipf_config()
+        connected = True
+    except Exception as e:
+        print(f"Error loading IP Fabric configuration: {e}")
+        print("Please ensure the .env file is configured correctly and try again.")
+        input("Press Enter to retry...")
+
 # endregion
 # region ## Load NetBox configuration
-netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = NetBoxloader.load_netbox_config()
+connected = False
+while connected == False:
+    try:
+        netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = load_netbox_config()
+        connected = True
+    except Exception as e:
+        print(f"Error loading NetBox configuration: {e}")
+        print("Please ensure the .env file is configured correctly and try again.")
+        input("Press Enter to retry...")
 # endregion
 # endregion
 
 # region # Export Wireless SSIDs from IP Fabric
-ipf_ssids = IPFexporter.export_ipf_data('wireless/ssid-summary', ['ssid', 'radioCount', 'apCount', 'clientCount', 'wlcCount'])
+ipf_ssids = export_ipf_data('wireless/ssid-summary', ['ssid', 'radioCount', 'apCount', 'clientCount', 'wlcCount'])
 print(f'Total SSIDs fetched from IP Fabric: {len(ipf_ssids)}')
 # endregion
 
@@ -36,7 +65,7 @@ print(f'Total SSIDs fetched from IP Fabric: {len(ipf_ssids)}')
 # endregion
 
 # region # Load SSIDs into NetBox
-url = f'{netboxbaseurl}wireless/wireless-lans/'
+url = f'{netboxbaseurl}wireless/wireless-lans/{branchurl}'
 ssidSuccessCount = 0
 ssidFailCount = 0
 for ssid in ipf_ssids:
@@ -58,7 +87,7 @@ print('SSID import process completed.')
 print(f'Total SSIDs processed: {len(ipf_ssids)}')
 print(f'Total SSIDs successfully imported: {ssidSuccessCount}')
 print(f'Total SSIDs failed to import: {ssidFailCount}')
-endtime = datetime.datetime.now()
+endtime = datetime.now()
 duration = endtime - starttime
 print(f'SSID import process completed. Start time: {starttime}, End time: {endtime}, Duration: {duration}')
 # endregion

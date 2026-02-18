@@ -11,22 +11,52 @@ TO-DO:
 '''
 
 # region # Imports and setup
-import IPFloader
-import IPFexporter
-import NetBoxloader
+from datetime import datetime
+from IPFloader import load_ipf_config
+from NetBoxloader import load_netbox_config
+from IPFexporter import export_ipf_data
 import requests
+import argparse
 
+starttime = datetime.now()
+
+# region ## Process arguments for branch selection
+ap = argparse.ArgumentParser(description="Import Sites from IP Fabric into NetBox")
+ap.add_argument("--branch", help="Create a NetBox branch for this import")
+args = ap.parse_args()
+if args.branch:
+    branchurl = f'?_branch={args.branch}'
+else:
+    branchurl = ''
+# endregion
 
 # region ## Load IP Fabric configuration
-ipfbaseurl, ipftoken, ipfheaders, ipflimit = IPFloader.load_ipf_config()
+connected = False
+while connected == False:
+    try:
+        ipfbaseurl, ipftoken, ipfheaders, ipflimit = load_ipf_config()
+        connected = True
+    except Exception as e:
+        print(f"Error loading IP Fabric configuration: {e}")
+        print("Please ensure the .env file is configured correctly and try again.")
+        input("Press Enter to retry...")
+
 # endregion
 # region ## Load NetBox configuration
-netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = NetBoxloader.load_netbox_config()
+connected = False
+while connected == False:
+    try:
+        netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = load_netbox_config()
+        connected = True
+    except Exception as e:
+        print(f"Error loading NetBox configuration: {e}")
+        print("Please ensure the .env file is configured correctly and try again.")
+        input("Press Enter to retry...")
 # endregion
 # endregion
 
 # region # Export Sites from IP Fabric
-ipf_sites = IPFexporter.export_ipf_data('inventory/sites', ['siteName'])
+ipf_sites = export_ipf_data('inventory/sites', ['siteName'])
 print(f'Total sites fetched from IP Fabric: {len(ipf_sites)}')
 # endregion
 
@@ -35,7 +65,7 @@ print(f'Total sites fetched from IP Fabric: {len(ipf_sites)}')
 # endregion
 
 # region # Load Sites into NetBox
-url = f'{netboxbaseurl}dcim/sites/'
+url = f'{netboxbaseurl}dcim/sites/{branchurl}'
 siteSuccessCount = 0
 siteFailCount = 0
 for site in ipf_sites:
@@ -51,7 +81,9 @@ for site in ipf_sites:
     else:
         siteFailCount += 1
         print(f'Failed to import site {site_name} into NetBox. Status Code: {r.status_code}, Response: {r.text}')
-print('Site import process completed.')
+endtime = datetime.now()
+duration = endtime - starttime
+print(f'Site import process completed. Start time: {starttime}, End time: {endtime}, Duration: {duration}')
 print(f'Total sites processed: {len(ipf_sites)}')
 print(f'Total sites successfully imported: {siteSuccessCount}')
 print(f'Total sites failed to import: {siteFailCount}')

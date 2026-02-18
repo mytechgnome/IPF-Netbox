@@ -7,7 +7,6 @@ Date: January 20, 2025
 NOTE Known Issues and Limitations:
 - Devices that are members of Virtual Chassis (VC) setups are split into individual device entries based on VC member data from IP Fabric.
 - Required fields such as Device Type, Device Role, and Site must exist in NetBox for successful import. Devices missing these fields are skipped, and a log of missing data is created.
-- Stack member interfaces are shown under the individual stack member device names, not under the master device. This could be intentional, as the physical interfaces belong to the stack members. (see bug about interface naming below)
 
 Bugs:
 - Stack members are not getting interfaces imported correctly, the interfaces should be shown as <member_number>/0/1, but are showing as 1/0/X for all members.
@@ -15,24 +14,54 @@ Bugs:
 
 # region # Imports and setup
 from dotenv import load_dotenv
-import IPFloader
-import IPFexporter
-import NetBoxloader
+from IPFloader import load_ipf_config
+from IPFexporter import export_ipf_data
+from NetBoxloader import load_netbox_config
 from NetBoxexporter import export_netbox_data
 import requests
 import os
 from pathlib import Path
-import datetime
+from datetime import datetime
 import re
+import argparse
 from difflib import get_close_matches
 
-starttime = datetime.datetime.now()
+starttime = datetime.now()
+
+# region ## Process arguments for branch selection
+ap = argparse.ArgumentParser(description="Import Sites from IP Fabric into NetBox")
+ap.add_argument("--branch", help="Create a NetBox branch for this import")
+args = ap.parse_args()
+if args.branch:
+    branchurl = f'?_branch={args.branch}'
+    schemaID = args.branch
+else:
+    branchurl = ''
+    schemaID = None
+# endregion
 
 # region ## Load IP Fabric configuration
-ipfbaseurl, ipftoken, ipfheaders, ipflimit = IPFloader.load_ipf_config()
+connected = False
+while connected == False:
+    try:
+        ipfbaseurl, ipftoken, ipfheaders, ipflimit = load_ipf_config()
+        connected = True
+    except Exception as e:
+        print(f"Error loading IP Fabric configuration: {e}")
+        print("Please ensure the .env file is configured correctly and try again.")
+        input("Press Enter to retry...")
+
 # endregion
 # region ## Load NetBox configuration
-netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = NetBoxloader.load_netbox_config()
+connected = False
+while connected == False:
+    try:
+        netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = load_netbox_config()
+        connected = True
+    except Exception as e:
+        print(f"Error loading NetBox configuration: {e}")
+        print("Please ensure the .env file is configured correctly and try again.")
+        input("Press Enter to retry...")
 # endregion
 # region ## Define paths
 try:
@@ -62,16 +91,16 @@ modellnamesensitivity = float(os.getenv('modellnamesensitivity', '0.8'))
 
 # region # Export data from IP Fabric
 # region ## Export Devices from IP Fabric
-ipf_devices = IPFexporter.export_ipf_data('inventory/devices', ['hostname', 'sn', 'siteName', 'snHw', 'loginIpv4', 'loginIpv6', 'uptime', 'reload', 'memoryUtilization', 'vendor', 'family', 'platform', 'model', 'version', 'devType'])
+ipf_devices = export_ipf_data('inventory/devices', ['hostname', 'sn', 'siteName', 'snHw', 'loginIpv4', 'loginIpv6', 'uptime', 'reload', 'memoryUtilization', 'vendor', 'family', 'platform', 'model', 'version', 'devType'])
 print(f'Total devices fetched from IP Fabric: {len(ipf_devices)}')
 # endregion
 # region ## Export VC members from IP Fabric
 # region ### Export Stack members from IP Fabric
-ipf_stackmembers = IPFexporter.export_ipf_data('platforms/stack/members', ['master', 'sn', 'siteName', 'member', 'pn', 'memberSn', 'role', 'state', 'mac', 'ver', 'image', 'hwVer'])
+ipf_stackmembers = export_ipf_data('platforms/stack/members', ['master', 'sn', 'siteName', 'member', 'pn', 'memberSn', 'role', 'state', 'mac', 'ver', 'image', 'hwVer'])
 print(f'Total virtual chassis members fetched from IP Fabric: {len(ipf_stackmembers)}')
 # endregion
 # region ### Export VSS members from IP Fabric
-ipf_vssmembers = IPFexporter.export_ipf_data('platforms/vss/chassis', ['hostname', 'chassisSn', 'siteName', 'chassisId', 'sn', 'state'])
+ipf_vssmembers = export_ipf_data('platforms/vss/chassis', ['hostname', 'chassisSn', 'siteName', 'chassisId', 'sn', 'state'])
 print(f'Total VSS members fetched from IP Fabric: {len(ipf_vssmembers)}')
 # endregion
 # endregion
@@ -80,11 +109,11 @@ print(f'Total VSS members fetched from IP Fabric: {len(ipf_vssmembers)}')
 # region # Transform VC members from IP Fabric
 # region ## Build Lookup Tables
 # region ### Get Part Numbers from IP Fabric
-ipf_pns = IPFexporter.export_ipf_data('inventory/pn', ['pid', 'sn'])
+ipf_pns = export_ipf_data('inventory/pn', ['pid', 'sn'])
 # endregion
 # region ### Match Device Types to NetBox Device Types
 # region #### Get Device Types from NetBox
-netbox_device_types = export_netbox_data('dcim/device-types')
+netbox_device_types = export_netbox_data('dcim/device-types',filters={'_branch='+schemaID} if schemaID else None)
 # endregion
 # region #### Build Device Type Lookup Dictionary
 device_type_lookup = {}
@@ -92,7 +121,7 @@ for device_type in netbox_device_types:
     device_type_lookup[device_type['part_number']] = device_type['id']
 # region ### Match Device Roles to NetBox Device Roles
 # region #### Get Device Roles from NetBox
-netbox_device_roles = export_netbox_data('dcim/device-roles')
+netbox_device_roles = export_netbox_data('dcim/device-roles',filters={'_branch='+schemaID} if schemaID else None)
 # endregion
 # region #### Build Device Role Lookup Dictionary
 device_role_lookup = {}
@@ -102,7 +131,7 @@ for device_role in netbox_device_roles:
 # endregion
 # region ### Match Site Names to Site IDs
 # region #### Get Sites from NetBox 
-netbox_sites = export_netbox_data('dcim/sites')
+netbox_sites = export_netbox_data('dcim/sites',filters={'_branch='+schemaID} if schemaID else None)
 # endregion
 # region #### Build Site Lookup Dictionary
 site_lookup = {}
@@ -112,7 +141,7 @@ for netbox_site in netbox_sites:
 # endregion
 # region ### Match Platform Names to NetBox IDs
 # region #### Get Platforms from NetBox
-netbox_platforms = export_netbox_data('dcim/platforms')
+netbox_platforms = export_netbox_data('dcim/platforms',filters={'_branch='+schemaID} if schemaID else None)
 # endregion
 # region #### Build Platform Lookup Dictionary
 platform_lookup = {}
@@ -122,7 +151,7 @@ for netbox_platform in netbox_platforms:
 # endregion
 # region ### Match Virtual Chassis Masters to NetBox VC IDs
 # region #### Get Virtual Chassis from NetBox
-netbox_vc = export_netbox_data('dcim/virtual-chassis')
+netbox_vc = export_netbox_data('dcim/virtual-chassis',filters={'_branch='+schemaID} if schemaID else None)
 # endregion
 # region #### Build VC Lookup Dictionary
 vc_lookup = {}
@@ -246,7 +275,7 @@ for i in transform_list:
 print(f'Processed {len(transform_list)} devices.')
 # endregion
 # region ## Check if devices already exist in NetBox
-existing_devices = export_netbox_data('dcim/devices')
+existing_devices = export_netbox_data('dcim/devices',filters={'_branch='+schemaID} if schemaID else None)
 existing_device_names = [d['name'] for d in existing_devices]
 for device in transform_list:
     device['new'] = None
@@ -320,9 +349,9 @@ vc_members = []
 taskduration = []
 # endregion
 # region ## Import devices
-url = f'{netboxbaseurl}dcim/devices/'
+url = f'{netboxbaseurl}dcim/devices/{branchurl}'
 for device in transform_list:
-    taskstart = datetime.datetime.now()
+    taskstart = datetime.now()
     devicename       = device['hostname']
     device_type      = device['device_type_ID']
     device_role      = device['device_role_ID']
@@ -348,7 +377,7 @@ for device in transform_list:
         'comments': comments
     }
     if device['new'] == False:
-        url = f'{netboxbaseurl}dcim/devices/{device["nb_id"]}/'
+        url = f'{netboxbaseurl}dcim/devices/{device["nb_id"]}/{branchurl}'
         r = requests.patch(url,headers=netboxheaders,json=payload,verify=False)
     else:
         r = requests.post(url,headers=netboxheaders,json=payload,verify=False)
@@ -369,7 +398,7 @@ for device in transform_list:
         error_text = f'{devicename}, {r.text}, {payload}, {device}'
         devicesfailed.append(error_text)
     deviceimportcounter += 1
-    taskend = datetime.datetime.now()
+    taskend = datetime.now()
     taskduration.append((taskend - taskstart).total_seconds())
     remaining = sum(taskduration) / len(taskduration) * (len(transform_list) - deviceimportcounter)
     print(f'Import progress: [{"█" * int(deviceimportcounter/len(transform_list)*100):100}]{deviceimportcounter/len(transform_list)*100:.2f}% Complete - ({deviceimportcounter}/{len(transform_list)}) devices imported. Remaining: {remaining:.2f}s', end="\r")
@@ -381,7 +410,7 @@ print(f'Updating Virtual Chassis masters with member IDs.')
 for i in vc_masters:
     vc = int(i[0])
     master = int(i[1])
-    url = f'{netboxbaseurl}dcim/virtual-chassis/{vc}/'
+    url = f'{netboxbaseurl}dcim/virtual-chassis/{vc}/{branchurl}'
     payload = {
         'master': master
     }
@@ -398,7 +427,7 @@ def update_vc_members(update_type, device_id, member_number):
     Errors = []
     UpdateCount = 0
     FailCount = 0
-    objects = export_netbox_data(f'dcim/{update_type}', netboxlimit=netboxlimit, filters=[f'device_id={device_id}'])
+    objects = export_netbox_data(f'dcim/{update_type}', netboxlimit=netboxlimit, filters=[f'device_id={device_id}', '_branch='+schemaID] if schemaID else [f'device_id={device_id}'])
     for object in objects:
         name = object['name']
         current_name = re.match(r"^(\w*)(\d+)([\/\{\w+\}]{1,})$", name)
@@ -408,7 +437,7 @@ def update_vc_members(update_type, device_id, member_number):
             prefix = current_name.group(1)
             suffix = current_name.group(3)
             new_name = f'{prefix}{member_number}{suffix}'
-            url = f'{netboxbaseurl}dcim/{update_type}/{object["id"]}/'
+            url = f'{netboxbaseurl}dcim/{update_type}/{object["id"]}/{branchurl}'
             payload = {
                 'name': new_name,
                 'display': new_name
@@ -433,7 +462,7 @@ vc_updates = 0
 taskduration = []
 print(f'Updating interface and module names for Virtual Chassis members.')
 for member in vc_members:
-    taskstart = datetime.datetime.now()
+    taskstart = datetime.now()
     device_id = int(member[0])
     member_number = int(member[1])
     if member_number == 1:  # Skip master member
@@ -448,7 +477,7 @@ for member in vc_members:
     moduleFailCount += fail_count
     moduleErrors.extend(errors)
     vc_updates += 1
-    taskend = datetime.datetime.now()
+    taskend = datetime.now()
     taskduration.append((taskend - taskstart).total_seconds())
     remaining = sum(taskduration) / len(taskduration) * (len(vc_members) - vc_updates)
     print(f'Import progress: [{"█" * int(vc_updates/len(vc_members)*100):100}]{vc_updates/len(vc_members)*100:.2f}% Complete - ({vc_updates}/{len(vc_members)}) Virtual Chassis members updated. Remaining: {remaining:.2f}s', end="\r")
@@ -470,9 +499,9 @@ Maybe this should be a separate script?
 # endregion
 # endregion
 # region # Summary and logging
-endtime = datetime.datetime.now()
+endtime = datetime.now()
 duration = endtime - starttime
-print(f'Device import process completed. Duration: {duration}')
+print(f'Device import process completed. Start time: {starttime}, End time: {endtime}, Duration: {duration}')
 print(f'Total devices processed: {len(transform_list)}')
 print(f'Total devices successfully imported: {deviceSuccessCount}')
 print(f'Total devices successfully updated: {deviceUpdateCount}')

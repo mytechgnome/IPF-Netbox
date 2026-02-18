@@ -21,13 +21,6 @@ Usage:
 
 Created by: Dan Kelcher
 Date: December 16, 2025
-
-TO-DO:
-- Add stack member device types to import # Done, need to test
-  - Pull stack member device types from IPF
-  - Identify models not present in the Device Inventory
-  - Lookup stack master in Device Inventory to find the vendor
-  - Add the stack member device types (model and vendor)to the import process
 """
 
 # region # Import and configure libraries
@@ -36,24 +29,52 @@ import re
 import os
 import yaml
 import json
+import argparse
 import pandas as pd
 from git import Repo
 from pathlib import Path
 from difflib import get_close_matches
 from difflib import SequenceMatcher
 from dotenv import load_dotenv
-import IPFloader
-import IPFexporter
-import NetBoxloader
-import datetime
+from IPFloader import load_ipf_config
+from IPFexporter import export_ipf_data
+from NetBoxloader import load_netbox_config
+from datetime import datetime
 
-starttime = datetime.datetime.now()
+starttime = datetime.now()
+
+# region ## Process arguments for branch selection
+ap = argparse.ArgumentParser(description="Import Sites from IP Fabric into NetBox")
+ap.add_argument("--branch", help="Create a NetBox branch for this import")
+args = ap.parse_args()
+if args.branch:
+    branchurl = f'?_branch={args.branch}'
+else:
+    branchurl = ''
+# endregion
 
 # region ## Load IP Fabric configuration
-ipfbaseurl, ipftoken, ipfheaders, ipflimit = IPFloader.load_ipf_config()
+connected = False
+while connected == False:
+    try:
+        ipfbaseurl, ipftoken, ipfheaders, ipflimit = load_ipf_config()
+        connected = True
+    except Exception as e:
+        print(f"Error loading IP Fabric configuration: {e}")
+        print("Please ensure the .env file is configured correctly and try again.")
+        input("Press Enter to retry...")
+
 # endregion
 # region ## Load NetBox configuration
-netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = NetBoxloader.load_netbox_config()
+connected = False
+while connected == False:
+    try:
+        netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = load_netbox_config()
+        connected = True
+    except Exception as e:
+        print(f"Error loading NetBox configuration: {e}")
+        print("Please ensure the .env file is configured correctly and try again.")
+        input("Press Enter to retry...")
 # endregion
 
 # region # Define variables
@@ -127,7 +148,7 @@ def add_device_type_components(yaml_object, objecttype, deviceID, netboxbaseurl,
     for componenttype in ['interface','front-port','rear-port','console-port','console-server-port','power-port','power-outlet','module-bay','device-bay']:
         componentkey = componenttype + 's'
         if componentkey in yaml_object:
-            url = f'{netboxbaseurl}dcim/{componenttype}-templates/'
+            url = f'{netboxbaseurl}dcim/{componenttype}-templates/{branchurl}'
             componentyaml = yaml_object.get(componentkey, [])
             for component in componentyaml:
                 component[f'{objecttype}_type'] = deviceID
@@ -161,7 +182,7 @@ lowermanufacturernames = [manufacturer.lower() for manufacturer in manufacturers
 # region ## Export list of vendors from IP Fabric
 print('Exporting vendors from IP Fabric...')
 vendors = json.loads('{"vendors": []}')
-ipf_vendors = IPFexporter.export_ipf_data('inventory/pn', ['vendor']) # Collects from PN table to get all vendors, including those only used in modules
+ipf_vendors = export_ipf_data('inventory/pn', ['vendor']) # Collects from PN table to get all vendors, including those only used in modules
 # region ### Filter unique vendors
 unique_vendors = []
 seen_vendors = set()
@@ -201,13 +222,13 @@ for i in ipf_vendors:
 # region ## Load vendors into NetBox
 netbox_vendors = {}
 # region ### Get vendor already in NetBox
-url = f'{netboxbaseurl}dcim/manufacturers/'
+url = f'{netboxbaseurl}dcim/manufacturers/{branchurl}'
 r = requests.get(url,headers=netboxheaders,verify=False)
 for manufacturer in r.json()['results']:
     netbox_vendors[manufacturer['name'].lower()] = manufacturer['id']
 # endregion
 print('Importing manufacturers into NetBox...')
-url = f'{netboxbaseurl}dcim/manufacturers/'
+url = f'{netboxbaseurl}dcim/manufacturers/{branchurl}'
 vendorSuccessCount = 0
 for i in vendors['vendors']:
     r = requests.post(url,headers=netboxheaders,json=i,verify=False)
@@ -226,7 +247,7 @@ print(f'NetBox manufacturer import complete. {vendorSuccessCount} of {len(ipf_ve
 # region ### Get list of models from IP Fabric
 print('Exporting device types from IP Fabric...')
 modelslist = json.loads('{"models": []}')
-ipf_models = IPFexporter.export_ipf_data('inventory/summary/models', ['vendor', 'family', 'platform', 'model'])
+ipf_models = export_ipf_data('inventory/summary/models', ['vendor', 'family', 'platform', 'model'])
 print(f'Total device types fetched from IP Fabric: {len(ipf_models)}')
 # endregion
 '''
@@ -234,7 +255,7 @@ NOTE: This section is required because IP Fabric does not list stack member devi
 IPF Feature Reequest 357 is open to add this functionality. 
 '''
 # region ### Get list of stack member models from IP Fabric
-ipf_vcmembers = IPFexporter.export_ipf_data('platforms/stack/members', ['master', 'pn'])
+ipf_vcmembers = export_ipf_data('platforms/stack/members', ['master', 'pn'])
 print(f'Total stack members fetched from IP Fabric: {len(ipf_vcmembers)}')
 # endregion
 # region ### Filter unique models
@@ -254,7 +275,7 @@ for item in missing_models:
         
 # endregion
 # region ### Collect data for missing models
-ipf_devices = IPFexporter.export_ipf_data('inventory/devices', ['hostname', 'vendor', 'family', 'platform'])
+ipf_devices = export_ipf_data('inventory/devices', ['hostname', 'vendor', 'family', 'platform'])
 # region #### Build a lookup dictionary for device details
 device_lookup = {device['hostname']: device for device in ipf_devices}
 # endregion
@@ -284,7 +305,7 @@ print(f'Importing device types into NetBox...')
 importCounter = 0
 taskduration = []
 for i in ipf_models:
-    taskstart = datetime.datetime.now()
+    taskstart = datetime.now()
     objecttype = 'device'
     vendor = i['vendor']
     manufacturerID = netbox_vendors.get(vendor.lower(), None)
@@ -332,7 +353,7 @@ for i in ipf_models:
 # region #### Get Device Type YAML and prepare for import
         idx = basemodelnames.index(devicetypelibrary[0])
         devicetypelibrary = models[idx]
-        url = f'{netboxbaseurl}dcim/device-types/'
+        url = f'{netboxbaseurl}dcim/device-types/{branchurl}'
         yamlpath = os.path.join(repodir, 'device-types', vendorlibrary, devicetypelibrary)
         with open(yamlpath, 'r') as yaml_in:
             yaml_object = yaml.safe_load(yaml_in)
@@ -347,7 +368,9 @@ for i in ipf_models:
 # region #### Load Device Type to NetBox
 # region ##### Add Device Type to NetBox
         r = requests.post(url,headers=netboxheaders,json=jsondata,verify=False)
-        if r.status_code == 201:
+        if r.status_code != 201:
+            r = requests.patch(url,headers=netboxheaders,json=jsondata,verify=False)
+        if r.status_code == 201 or r.status_code == 200:
             deviceID = r.json()['id']
             slug = r.json()['slug']
 # endregion
@@ -372,7 +395,7 @@ for i in ipf_models:
                     image = [images[idx]]
                     imagepath = os.path.join(imagedir, image[0])
                     file = {i + '_image': (image[0], open(imagepath, 'rb'))}
-                    r = requests.patch(f'{netboxbaseurl}dcim/device-types/{deviceID}/',headers=netboxheadersimage,files=file,verify=False)
+                    r = requests.patch(f'{netboxbaseurl}dcim/device-types/{deviceID}/{branchurl}',headers=netboxheadersimage,files=file,verify=False)
 # endregion
             add_device_type_components(yaml_object, objecttype, deviceID, netboxbaseurl, netboxheaders)
 # region #### Log failed imports
@@ -382,7 +405,7 @@ for i in ipf_models:
             if r.text.find('already exists') != -1:
                 duplicate += 1
         importCounter += 1
-        taskend = datetime.datetime.now()
+        taskend = datetime.now()
         taskduration.append((taskend - taskstart).total_seconds())
         remaining = sum(taskduration) / len(taskduration) * (len(ipf_models) - importCounter)
         print(f'Import progress: [{"█" * int(importCounter/len(ipf_models)*100):100}] {importCounter/len(ipf_models)*100:.2f}% Complete - ({importCounter}/{len(ipf_models)}) device types imported. Remaining: {remaining:.2f}s', end="\r")
@@ -399,7 +422,7 @@ print(f'Netbox device import complete. {duplicate} duplicates skipped, {nomatch}
 # region # Import IP Fabric Modules to NetBox
 # region ## Export list of modules from IP Fabric
 print('Getting modules from IP Fabric...')
-ipf_modules = IPFexporter.export_ipf_data('inventory/pn', ['pid', 'vendor', 'deviceSn', 'dscr', 'pid', 'sn', 'model'])
+ipf_modules = export_ipf_data('inventory/pn', ['pid', 'vendor', 'deviceSn', 'dscr', 'pid', 'sn', 'model'])
 print(f'Total modules fetched from IP Fabric: {len(ipf_modules)}')
 # endregion
 # region ## Transform module data
@@ -437,7 +460,7 @@ for vendor in modules['modules']:
 modules = filtered_modules
 # endregion
 # region ### Get module profiles from NetBox
-url = f'{netboxbaseurl}dcim/module-type-profiles/'
+url = f'{netboxbaseurl}dcim/module-type-profiles/{branchurl}'
 r = requests.get(url=url,headers=netboxheaders,verify=False)
 for profile in r.json()['results']:
     if profile['name'] == 'Fan':
@@ -464,7 +487,6 @@ for i in modules['modules']:
     moduleslist = os.listdir(os.path.join(repodir, 'module-types', vendorlibrary))
     basemodulenames = [os.path.splitext(module.lower())[0] for module in moduleslist]
 # region ### Find Manufacture ID from NetBox
-    url = f'{netboxbaseurl}dcim/manufacturers/?slug={vendor}'
     vendor = vendorlibrary
     manufacturerID = netbox_vendors.get(vendor.lower(), None)
 # endregion
@@ -472,7 +494,7 @@ for i in modules['modules']:
     importCounter = 0
     taskduration = []
     for module in modules['modules'][i]:
-        taskstart = datetime.datetime.now()
+        taskstart = datetime.now()
         moduletypelibrary = get_close_matches(module.lower(),basemodulenames, n=1 , cutoff=modulenamesensitivity)
         if moduletypelibrary:
             score = SequenceMatcher(None, module.lower(), moduletypelibrary[0]).ratio()
@@ -498,7 +520,7 @@ for i in modules['modules']:
 # endregion
 # endregion
 # region ## Load Module Type to NetBox
-            url = f'{netboxbaseurl}dcim/module-types/'
+            url = f'{netboxbaseurl}dcim/module-types/{branchurl}'
             jsondata = json.dumps(yaml_object)
             jsondata = json.loads(jsondata)
             r = requests.post(url,headers=netboxheaders,json=jsondata,verify=False)
@@ -514,7 +536,7 @@ for i in modules['modules']:
             error_text = f'{vendorlibrary},{module}'
             errors_matchmodule.append(error_text)
         importCounter += 1
-        taskend = datetime.datetime.now()
+        taskend = datetime.now()
         taskduration.append((taskend - taskstart).total_seconds())
         remaining = sum(taskduration) / len(taskduration) * (len(modules['modules'][i]) - importCounter)
         print(f'Import progress: [{"█" * int(importCounter/len(modules["modules"][i])*100):100}]{importCounter/len(modules["modules"][i])*100:.2f}% Complete - ({importCounter}/{len(modules["modules"][i])}) {i} modules imported. Remaining: {remaining:.2f}s', end="\r")
@@ -553,9 +575,9 @@ with open(os.path.join(log_dir, 'DeviceTypeImport_Mappings_Module.csv'), 'w') as
 with open(os.path.join(log_dir, 'DeviceTypeImport_Mappings_Vendor.csv'), 'w') as f:
     for item in mappings_vendor:
         f.write("%s\n" % item)
-endtime = datetime.datetime.now()
+endtime = datetime.now()
 duration = endtime - starttime
-print(f'Device Type and Module Type import process completed in {duration}')
+print(f'Device Type import process completed. Start time: {starttime}, End time: {endtime}, Duration: {duration}')
 print(f'Total device types processed: {len(ipf_models)}')
 print(f'Total module types processed: {len(ipf_modules)}')
 print(f'Total device types failed to import: {len(errors_importdevice)-1}')

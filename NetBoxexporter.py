@@ -40,7 +40,7 @@ def export_netbox_data(endpoint, netboxlimit=netboxlimit, filters=[]):
     # Fetch additional pages if necessary
     while r.json()['next']:
         netboxstart += netboxlimit
-        print(f'Fetching {endpoint} data {netboxstart} to {netboxstart + netboxlimit} from NetBox...')
+        print(f'Fetching {endpoint} data {netboxstart} to {netboxstart + netboxlimit} from NetBox...',end="\r")
         r = requests.get(r.json()['next'],headers=netboxheaders,verify=False)
         netbox_data.extend(r.json()['results'])
     return netbox_data
