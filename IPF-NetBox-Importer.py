@@ -4,15 +4,17 @@ Script to run all IP Fabric to NetBox import processes.
 Created by: Dan Kelcher
 Date: January 29, 2026
 '''
-from datetime import datetime, time
+from datetime import datetime
 import subprocess
 
 use_branch = True
 
 starttime = datetime.now()
 if use_branch:
+    print("Creating NetBox branch for import...")
     from NetBoxloader import load_netbox_config
     import requests
+    import time
     timestamp = starttime.strftime("%Y%m%d-%H%M%S")
     branchname = f'IPF_import_{timestamp}'
     netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = load_netbox_config()
@@ -32,10 +34,8 @@ if use_branch:
         else:
             print(f'Waiting for branch to be ready. Current status: {r.json()["status"]["value"]}. Waited {(datetime.now() - taskstart).total_seconds()} seconds.', end="\r")
             counter += 1
-            #time.sleep(.5)
+            time.sleep(5)
     print(f'Branch is ready. Waited {counter} times over {(datetime.now() - taskstart).total_seconds()} seconds.')
-        
-
 
 subprocess.run(["python", "IPF_NetBox_ImportSites.py", '--branch', schemaID])
 subprocess.run(["python", "IPF_NetBox_ImportRoles.py", '--branch', schemaID])
