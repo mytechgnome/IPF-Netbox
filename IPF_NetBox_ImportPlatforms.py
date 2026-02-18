@@ -52,7 +52,6 @@ while connected == False:
 
 # region # Export Platforms from IP Fabric
 ipf_platforms = export_ipf_data('inventory/summary/families', ['vendor', 'family'])
-print(f'Total platforms fetched from IP Fabric: {len(ipf_platforms)}')
 # endregion
 
 # region # Transform Platforms Vendor to NetBox Manufacturers

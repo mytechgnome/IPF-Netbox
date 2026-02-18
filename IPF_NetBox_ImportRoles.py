@@ -67,7 +67,6 @@ if not os.path.isfile(os.path.join(currentdir, 'DataSources', 'NetBoxDeviceRoleC
 
 # region # Export Device Types from IP Fabric
 ipf_device_types = export_ipf_data('inventory/devices', ['devType'])
-print(f'Total device types fetched from IP Fabric: {len(ipf_device_types)}')
 # endregion
 
 # region # Transform Device Types into unique list

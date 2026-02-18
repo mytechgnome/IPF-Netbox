@@ -82,7 +82,6 @@ while connected == False:
 
 # region # Export connectivity matrix from IP Fabric
 ipf_connections = export_ipf_data('interfaces/connectivity-matrix', ['siteName', 'localHost', 'localInt', 'localMedia', 'remoteHost', 'remoteInt', 'remoteMedia', 'protocol'], filters={"protocol": ['like', 'cdp']})
-print(f'Total cables fetched from IP Fabric: {len(ipf_connections)}')
 # endregion
 
 # region # Transform connectivity data from IP Fabric

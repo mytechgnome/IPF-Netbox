@@ -248,7 +248,6 @@ print(f'NetBox manufacturer import complete. {vendorSuccessCount} of {len(ipf_ve
 print('Exporting device types from IP Fabric...')
 modelslist = json.loads('{"models": []}')
 ipf_models = export_ipf_data('inventory/summary/models', ['vendor', 'family', 'platform', 'model'])
-print(f'Total device types fetched from IP Fabric: {len(ipf_models)}')
 # endregion
 '''
 NOTE: This section is required because IP Fabric does not list stack member devices in the device inventory.
@@ -256,7 +255,6 @@ IPF Feature Reequest 357 is open to add this functionality.
 '''
 # region ### Get list of stack member models from IP Fabric
 ipf_vcmembers = export_ipf_data('platforms/stack/members', ['master', 'pn'])
-print(f'Total stack members fetched from IP Fabric: {len(ipf_vcmembers)}')
 # endregion
 # region ### Filter unique models
 print('Filtering unique device types...')
@@ -423,7 +421,6 @@ print(f'Netbox device import complete. {duplicate} duplicates skipped, {nomatch}
 # region ## Export list of modules from IP Fabric
 print('Getting modules from IP Fabric...')
 ipf_modules = export_ipf_data('inventory/pn', ['pid', 'vendor', 'deviceSn', 'dscr', 'pid', 'sn', 'model'])
-print(f'Total modules fetched from IP Fabric: {len(ipf_modules)}')
 # endregion
 # region ## Transform module data
 # region ### Remove invalid modules - IP Fabric sometimes includes device chassis as modules, filter these out

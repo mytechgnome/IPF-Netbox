@@ -57,7 +57,6 @@ while connected == False:
 
 # region # Export Wireless SSIDs from IP Fabric
 ipf_ssids = export_ipf_data('wireless/ssid-summary', ['ssid', 'radioCount', 'apCount', 'clientCount', 'wlcCount'])
-print(f'Total SSIDs fetched from IP Fabric: {len(ipf_ssids)}')
 # endregion
 
 # region # Transform SSIDs from IP Fabric

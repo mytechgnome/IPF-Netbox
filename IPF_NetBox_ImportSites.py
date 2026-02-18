@@ -57,7 +57,6 @@ while connected == False:
 
 # region # Export Sites from IP Fabric
 ipf_sites = export_ipf_data('inventory/sites', ['siteName'])
-print(f'Total sites fetched from IP Fabric: {len(ipf_sites)}')
 # endregion
 
 # region # Transform Sites from IP Fabric

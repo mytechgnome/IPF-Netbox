@@ -46,6 +46,7 @@ def export_ipf_data(table_name, columns, snapshot="$last", attribute_filters=Non
         "limit": ipflimit
       },
     }
+    print(f'Fetching {table_name} data from IP Fabric...',end="\r")
     r = requests.post(url,headers=ipfheaders,json=payload,verify=False)
     ipf_data = r.json()['data']
     # Fetch additional pages if necessary
@@ -55,6 +56,7 @@ def export_ipf_data(table_name, columns, snapshot="$last", attribute_filters=Non
         print(f'Fetching {table_name} data {ipfstart} to {ipfstart + ipflimit} from IP Fabric...',end="\r")
         r = requests.post(url,headers=ipfheaders,json=payload,verify=False)
         ipf_data.extend(r.json()['data'])
+    print(f'\nFetched {len(ipf_data)} records from {table_name} in IP Fabric.')
     return ipf_data
 # endregion
 

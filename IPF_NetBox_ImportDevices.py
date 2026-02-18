@@ -90,20 +90,9 @@ modellnamesensitivity = float(os.getenv('modellnamesensitivity', '0.8'))
 # endregion
 
 # region # Export data from IP Fabric
-# region ## Export Devices from IP Fabric
 ipf_devices = export_ipf_data('inventory/devices', ['hostname', 'sn', 'siteName', 'snHw', 'loginIpv4', 'loginIpv6', 'uptime', 'reload', 'memoryUtilization', 'vendor', 'family', 'platform', 'model', 'version', 'devType'])
-print(f'Total devices fetched from IP Fabric: {len(ipf_devices)}')
-# endregion
-# region ## Export VC members from IP Fabric
-# region ### Export Stack members from IP Fabric
 ipf_stackmembers = export_ipf_data('platforms/stack/members', ['master', 'sn', 'siteName', 'member', 'pn', 'memberSn', 'role', 'state', 'mac', 'ver', 'image', 'hwVer'])
-print(f'Total virtual chassis members fetched from IP Fabric: {len(ipf_stackmembers)}')
-# endregion
-# region ### Export VSS members from IP Fabric
 ipf_vssmembers = export_ipf_data('platforms/vss/chassis', ['hostname', 'chassisSn', 'siteName', 'chassisId', 'sn', 'state'])
-print(f'Total VSS members fetched from IP Fabric: {len(ipf_vssmembers)}')
-# endregion
-# endregion
 # endregion
 
 # region # Transform VC members from IP Fabric
@@ -401,7 +390,7 @@ for device in transform_list:
     taskend = datetime.now()
     taskduration.append((taskend - taskstart).total_seconds())
     remaining = sum(taskduration) / len(taskduration) * (len(transform_list) - deviceimportcounter)
-    print(f'Import progress: [{"█" * int(deviceimportcounter/len(transform_list)*100):100}]{deviceimportcounter/len(transform_list)*100:.2f}% Complete - ({deviceimportcounter}/{len(transform_list)}) devices imported. Remaining: {remaining:.2f}s', end="\r")
+    print(f'Import progress: [{"█" * int(deviceimportcounter/len(transform_list)*100):100}]{deviceimportcounter/len(transform_list)*100:.2f}% Complete - ({deviceimportcounter}/{len(transform_list)}) devices imported. Remaining: {remaining:.2f}s    ', end="\r")
 print(f'\nDevice import process completed. Total Success: {deviceSuccessCount}, Updated: {deviceUpdateCount}, Failed: {deviceFailCount}')
 # endregion
 # endregion
@@ -417,7 +406,7 @@ for i in vc_masters:
     r = requests.patch(url,headers=netboxheaders,json=payload,verify=False)
     if r.status_code != 200:
         print(f'Failed to update VC {vc} with master device ID {master}. Response: {r.text}')
-    print(f'Update progress: {vc_masters.index(i)/len(vc_masters)*100:.2f}% Complete - ({vc_masters.index(i)}/{len(vc_masters)}) VC masters updated.', end="\r")
+    print(f'Update progress: [{"█" * int(1+vc_masters.index(i)/len(vc_masters)*100):100}]{(1+vc_masters.index(i))/len(vc_masters)*100:.2f}% Complete - ({(1+vc_masters.index(i))}/{len(vc_masters)}) VC masters updated.   ', end="\r")
 print(f'\nVirtual Chassis master update process completed.')
 # endregion
 
@@ -480,7 +469,7 @@ for member in vc_members:
     taskend = datetime.now()
     taskduration.append((taskend - taskstart).total_seconds())
     remaining = sum(taskduration) / len(taskduration) * (len(vc_members) - vc_updates)
-    print(f'Import progress: [{"█" * int(vc_updates/len(vc_members)*100):100}]{vc_updates/len(vc_members)*100:.2f}% Complete - ({vc_updates}/{len(vc_members)}) Virtual Chassis members updated. Remaining: {remaining:.2f}s', end="\r")
+    print(f'Import progress: [{"█" * int(vc_updates/len(vc_members)*100):100}]{vc_updates/len(vc_members)*100:.2f}% Complete - ({vc_updates}/{len(vc_members)}) Virtual Chassis members updated. Remaining: {remaining:.2f}s    ', end="\r")
 print(f'\nVirtual Chassis member interface and module name update process completed.')
 print(f'Total interfaces updated: {interfaceUpdateCount}, failed: {interfaceFailCount}')
 print(f'Total modules updated: {moduleUpdateCount}, failed: {moduleFailCount}')
