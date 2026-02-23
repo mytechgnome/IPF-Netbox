@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 from IPFloader import load_ipf_config
 from IPFexporter import export_ipf_data
 from NetBoxloader import load_netbox_config
-from NetBoxexporter import export_netbox_data
+from NetBoxHelper import *
 import requests
 import os
 from pathlib import Path
@@ -102,7 +102,7 @@ ipf_pns = export_ipf_data('inventory/pn', ['pid', 'sn'])
 # endregion
 # region ### Match Device Types to NetBox Device Types
 # region #### Get Device Types from NetBox
-netbox_device_types = export_netbox_data('dcim/device-types',filters={'_branch='+schemaID} if schemaID else None)
+netbox_device_types = get_netbox_data('dcim/device-types',filters={'_branch='+schemaID} if schemaID else None)
 # endregion
 # region #### Build Device Type Lookup Dictionary
 device_type_lookup = {}
@@ -110,7 +110,7 @@ for device_type in netbox_device_types:
     device_type_lookup[device_type['part_number']] = device_type['id']
 # region ### Match Device Roles to NetBox Device Roles
 # region #### Get Device Roles from NetBox
-netbox_device_roles = export_netbox_data('dcim/device-roles',filters={'_branch='+schemaID} if schemaID else None)
+netbox_device_roles = get_netbox_data('dcim/device-roles',filters={'_branch='+schemaID} if schemaID else None)
 # endregion
 # region #### Build Device Role Lookup Dictionary
 device_role_lookup = {}
@@ -120,7 +120,7 @@ for device_role in netbox_device_roles:
 # endregion
 # region ### Match Site Names to Site IDs
 # region #### Get Sites from NetBox 
-netbox_sites = export_netbox_data('dcim/sites',filters={'_branch='+schemaID} if schemaID else None)
+netbox_sites = get_netbox_data('dcim/sites',filters={'_branch='+schemaID} if schemaID else None)
 # endregion
 # region #### Build Site Lookup Dictionary
 site_lookup = {}
@@ -130,7 +130,7 @@ for netbox_site in netbox_sites:
 # endregion
 # region ### Match Platform Names to NetBox IDs
 # region #### Get Platforms from NetBox
-netbox_platforms = export_netbox_data('dcim/platforms',filters={'_branch='+schemaID} if schemaID else None)
+netbox_platforms = get_netbox_data('dcim/platforms',filters={'_branch='+schemaID} if schemaID else None)
 # endregion
 # region #### Build Platform Lookup Dictionary
 platform_lookup = {}
@@ -140,7 +140,7 @@ for netbox_platform in netbox_platforms:
 # endregion
 # region ### Match Virtual Chassis Masters to NetBox VC IDs
 # region #### Get Virtual Chassis from NetBox
-netbox_vc = export_netbox_data('dcim/virtual-chassis',filters={'_branch='+schemaID} if schemaID else None)
+netbox_vc = get_netbox_data('dcim/virtual-chassis',filters={'_branch='+schemaID} if schemaID else None)
 # endregion
 # region #### Build VC Lookup Dictionary
 vc_lookup = {}
@@ -264,7 +264,7 @@ for i in transform_list:
 print(f'Processed {len(transform_list)} devices.')
 # endregion
 # region ## Check if devices already exist in NetBox
-existing_devices = export_netbox_data('dcim/devices',filters={'_branch='+schemaID} if schemaID else None)
+existing_devices = get_netbox_data('dcim/devices',filters={'_branch='+schemaID} if schemaID else None)
 existing_device_names = [d['name'] for d in existing_devices]
 for device in transform_list:
     device['new'] = None
@@ -416,7 +416,7 @@ def update_vc_members(update_type, device_id, member_number):
     Errors = []
     UpdateCount = 0
     FailCount = 0
-    objects = export_netbox_data(f'dcim/{update_type}', netboxlimit=netboxlimit, filters=[f'device_id={device_id}', '_branch='+schemaID] if schemaID else [f'device_id={device_id}'])
+    objects = get_netbox_data(f'dcim/{update_type}', netboxlimit=netboxlimit, filters=[f'device_id={device_id}', '_branch='+schemaID] if schemaID else [f'device_id={device_id}'])
     for object in objects:
         name = object['name']
         current_name = re.match(r"^(\w*)(\d+)([\/\{\w+\}]{1,})$", name)

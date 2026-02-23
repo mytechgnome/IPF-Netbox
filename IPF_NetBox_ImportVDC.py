@@ -9,7 +9,7 @@ Date: February 3, 2026
 from IPFloader import load_ipf_config
 from NetBoxloader import load_netbox_config
 from IPFexporter import export_ipf_data
-from NetBoxexporter import export_netbox_data
+from NetBoxHelper import *
 import requests
 import argparse
 from datetime import datetime
@@ -60,7 +60,7 @@ ipf_vdcs = export_ipf_data('platforms/devices', ['hostname', 'contextName', 'con
 # region # Transform data
 # region ## Get existing devices from NetBox to build a lookup table
 netbox_devices = []
-netbox_devices = export_netbox_data('dcim/devices',filters={'_branch='+schemaID} if schemaID else None)
+netbox_devices = get_netbox_data('dcim/devices',filters={'_branch='+schemaID} if schemaID else None)
 # endregion
 # region ## Build Device Lookup Dictionary
 for vdc in ipf_vdcs:

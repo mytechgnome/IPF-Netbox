@@ -1,0 +1,13 @@
+---
+devices:
+ - manufacturer: Dell
+   models:
+   - PowerEdge-R650
+   - PowerEdge-R660
+   - PowerEdge-R840
+ - manufacturer: Cisco
+   models:
+   - C9300-48U
+modules:
+  - manufacturer: Dell
+    models:

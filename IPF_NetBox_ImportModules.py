@@ -14,7 +14,7 @@ import argparse
 from IPFexporter import export_ipf_data
 from IPFloader import load_ipf_config
 from NetBoxloader import load_netbox_config
-from NetBoxexporter import export_netbox_data
+from NetBoxHelper import *
 from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
@@ -86,9 +86,9 @@ with yaml_path.open('r', encoding='utf-8') as f:
 print("Exporting module and related data from IP Fabric and NetBox...")
 ipf_modules        = export_ipf_data('inventory/pn', ['hostname','name','dscr','pid','sn','deviceSn','model'])
 ipf_vcmembers      = export_ipf_data('platforms/stack/members', ['master','member','sn'])
-netbox_moduletypes = export_netbox_data('dcim/module-types',filters={'_branch='+schemaID} if schemaID else None)
-netbox_devices     = export_netbox_data('dcim/devices',filters={'_branch='+schemaID} if schemaID else None)
-netbox_module_bays = export_netbox_data('dcim/module-bays',filters={'_branch='+schemaID} if schemaID else None)
+netbox_moduletypes = get_netbox_data('dcim/module-types',filters={'_branch='+schemaID} if schemaID else None)
+netbox_devices     = get_netbox_data('dcim/devices',filters={'_branch='+schemaID} if schemaID else None)
+netbox_module_bays = get_netbox_data('dcim/module-bays',filters={'_branch='+schemaID} if schemaID else None)
 print(f'Total modules fetched from IP Fabric: {len(ipf_modules)}')
 print(f'Total module bays fetched from NetBox: {len(netbox_module_bays)}')
 # endregion
@@ -432,7 +432,7 @@ def _rewrite_member_string(s: str, member_number: int) -> str:
 
 # region ### Main function to update VC member bay names/labels/positions based on member number
 def update_vc_bays(device_id: int, member_number: int):
-    bays = export_netbox_data('dcim/module-bays', netboxlimit=netboxlimit, filters=[f'device_id={device_id}', '_branch='+schemaID] if schemaID else [f'device_id={device_id}'])
+    bays = get_netbox_data('dcim/module-bays', netboxlimit=netboxlimit, filters=[f'device_id={device_id}', '_branch='+schemaID] if schemaID else [f'device_id={device_id}'])
     updates = 0
     skips   = 0
     errors  = []
@@ -522,7 +522,7 @@ create_modules_in_netbox('sfp', sfp_modules_to_create)
 
 # region ### Update VC member interface names to have correct member number in name/label/position
 def update_vc_interfaces(device_id, member_number):
-    interfaces = export_netbox_data('dcim/interfaces', netboxlimit=netboxlimit, filters=[f'device_id={device_id}', '_branch='+schemaID] if schemaID else [f'device_id={device_id}'])
+    interfaces = get_netbox_data('dcim/interfaces', netboxlimit=netboxlimit, filters=[f'device_id={device_id}', '_branch='+schemaID] if schemaID else [f'device_id={device_id}'])
     for intf in interfaces:
         name = intf.get('name') or ''
         m_if = re.match(r'^(?P<pfx>Te|Gi|Hu|Twe|Eth|Ethernet|TenGigabitEthernet|GigabitEthernet|HundredGigE|TwentyFiveGigE)(?P<member>\d+)(?P<rest>/.*)$', name)

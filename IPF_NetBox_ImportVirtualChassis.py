@@ -13,7 +13,7 @@ TO-DO:
 from IPFloader import load_ipf_config
 from IPFexporter import export_ipf_data
 from NetBoxloader import load_netbox_config
-from NetBoxexporter import export_netbox_data
+from NetBoxHelper import *
 import requests
 import argparse
 from datetime import datetime
@@ -74,7 +74,7 @@ print(f'Total virtual chassis fetched from IP Fabric: {len(ipf_vc)}')
 
 # region # Transform VC members from IP Fabric
 # region ## Get existing VC configuration
-nb_vc = export_netbox_data('dcim/virtual-chassis', filters={'_branch='+schemaID} if schemaID else None)
+nb_vc = get_netbox_data('dcim/virtual-chassis', filters={'_branch='+schemaID} if schemaID else None)
 existing_vc = {}
 for i in nb_vc:
     existing_vc[i['name'].lower()] = i['id']

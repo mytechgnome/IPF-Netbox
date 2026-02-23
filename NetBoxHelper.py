@@ -17,7 +17,7 @@ netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = NetBoxloader.load_netbo
 '''
 Usage Example:
 import Netboxloader
-netbox_data = NetBoxexporter.export_netbox_data('dcim/devices'))
+netbox_data = NetBoxexporter.get_netbox_data('dcim/devices'))
 print(netbox_data)
 This will fetch device hostname, serial number, and site name from NetBox's inventory/devices table.
 
@@ -28,8 +28,9 @@ Returns:
 - list: A JSON formatted list of dictionaries containing the requested data from NetBox.
 '''
 
-# region # Define function
-def export_netbox_data(endpoint, netboxlimit=netboxlimit, filters=[]):
+# region # Define functions
+# region ## Get data from NetBox
+def get_netbox_data(endpoint, netboxlimit=netboxlimit, filters=[]):
     netboxfilter = ''
     for f in filters or []:
         netboxfilter += f'&{f}'
@@ -44,13 +45,38 @@ def export_netbox_data(endpoint, netboxlimit=netboxlimit, filters=[]):
         r = requests.get(r.json()['next'],headers=netboxheaders,verify=False)
         netbox_data.extend(r.json()['results'])
     return netbox_data
+# region ## Post data to NetBox
+def post_netbox_data(endpoint, payload):
+    url = f'{netboxbaseurl}{endpoint}/'
+    r = requests.post(url, headers=netboxheaders, json=payload, verify=False)
+    netbox_data = r.json()['results']
+    # Fetch additional pages if necessary
+    return netbox_data
+# endregion
+# region ## Put data to NetBox
+def put_netbox_data(endpoint, payload):
+    url = f'{netboxbaseurl}{endpoint}/'
+    r = requests.put(url, headers=netboxheaders, json=payload, verify=False)
+    netbox_data = r.json()['results']
+    # Fetch additional pages if necessary
+    return netbox_data
+# endregion
+# region ## Patch data to NetBox
+def patch_netbox_data(endpoint, payload):
+    url = f'{netboxbaseurl}{endpoint}/'
+    r = requests.patch(url, headers=netboxheaders, json=payload, verify=False)
+    netbox_data = r.json()['results']
+    # Fetch additional pages if necessary
+    return netbox_data
+# endregion
 # endregion
 
 # region # Test function
 if __name__ == "__main__":
-    print('Testing export_netbox_data function...')
+    print('This is a helper module to export data from NetBox. Please import and use the export_netbox_data function in your script to fetch data from NetBox.')
+    print('Testing get_netbox_data function...')
     # The example endpoint should be contain more items than the NetBox limit to test pagination
-    netbox_data = export_netbox_data('dcim/devices')
+    netbox_data = get_netbox_data('dcim/devices')
     if len(netbox_data) > netboxlimit:
         print(f"Pagination test passed: Retrieved {len(netbox_data)} records.")
     else:
