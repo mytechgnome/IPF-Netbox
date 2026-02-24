@@ -49,7 +49,7 @@ def get_netbox_data(endpoint, netboxlimit=netboxlimit, filters=[]):
 def post_netbox_data(endpoint, payload):
     url = f'{netboxbaseurl}{endpoint}/'
     r = requests.post(url, headers=netboxheaders, json=payload, verify=False)
-    netbox_data = r.json()['results']
+    netbox_data = r.json()
     # Fetch additional pages if necessary
     return netbox_data
 # endregion
