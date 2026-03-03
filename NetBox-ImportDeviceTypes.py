@@ -7,7 +7,6 @@ Date: February 23, 2026
 
 import os
 
-from NetBoxloader import load_netbox_config
 from NetBoxHelper import *
 from pathlib import Path
 from collections import defaultdict
@@ -37,8 +36,8 @@ def setup():
     reposource = os.getenv('reposource', 'https://github.com/netbox-community/devicetype-library.git')
     vendornamesensitivity = float(os.getenv('vendornamesensitivity', '0.8'))
     # Load NetBox configuration
-    netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = load_netbox_config()
-    return reposource
+    #netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = load_netbox_config()
+    return reposource, vendornamesensitivity
 
 def get_manufacturers(schemaID=schemaID):
     manufacturers = []
@@ -148,7 +147,6 @@ def get_manufacturer_folder(manufacturer, repodir, lookup_type, vendornamesensit
             return None
 
 def get_device_yaml(model, manufacturer_folder):
-    # This function can be used to retrieve the YAML file for a specific device type from the repository
     yaml_file = os.path.join(manufacturer_folder, f'{model}.yaml')
     if os.path.isfile(yaml_file):
         with open(yaml_file, 'r') as f:
@@ -158,7 +156,7 @@ def get_device_yaml(model, manufacturer_folder):
         print(f'YAML file for model {model} not found in repository.')
         return None
 
-def enrich_device_type_data(import_model, manufacturers):
+def enrich_device_type_data(import_model, manufacturers, device_yaml):
     enriched_data = []
     for vendor, model in import_model:
         manufacturer_id = next((m['id'] for m in manufacturers if m['name'] == vendor), None)
@@ -170,7 +168,7 @@ def enrich_device_type_data(import_model, manufacturers):
     return enriched_data
 
 def main():
-    reposource = setup()
+    reposource, vendornamesensitivity = setup()
     existing_device_types = get_device_types()
     inventory_list = get_yaml_data(inventory_yaml_file)
     repodir = get_repo_dir()
@@ -180,6 +178,14 @@ def main():
     create_manufacturer(import_manufacturers)
     manufacturers = get_manufacturers() # Refresh manufacturers list after potential imports
     import_models = model_to_import(inventory_list, existing_device_types)
+    for i in import_models:
+        manufacturer_folder = get_manufacturer_folder(i[0], repodir, 'device', vendornamesensitivity)
+        if manufacturer_folder:
+            device_yaml = get_device_yaml(i[1], manufacturer_folder)
+            if device_yaml:
+                enriched_data = enrich_device_type_data(import_models, manufacturers, device_yaml)
+                print(f'Enriched data for {i[0]} {i[1]}: {enriched_data}')
+                # Here you would add the code to create the device type in NetBox using the enriched data
     
     print('Task completed successfully.')
     print('Existing device types retrieved from NetBox:')
