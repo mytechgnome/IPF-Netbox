@@ -34,7 +34,6 @@ if use_branch:
         else:
             print(f'Waiting for branch to be ready. Current status: {r.json()["status"]["value"]}. Waited {(datetime.now() - taskstart).total_seconds()} seconds.', end="\r")
             counter += 1
-            time.sleep(5)
     print(f'Branch is ready. Waited {counter} times over {(datetime.now() - taskstart).total_seconds()} seconds.')
 
 subprocess.run(["python", "IPF_NetBox_ImportSites.py", '--branch', schemaID])

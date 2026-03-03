@@ -6,7 +6,6 @@ Date: February 23, 2026
 '''
 
 import os
-
 from NetBoxHelper import *
 from pathlib import Path
 from collections import defaultdict
@@ -16,7 +15,6 @@ from difflib import get_close_matches
 from difflib import SequenceMatcher
 import argparse
 import yaml
-
 
 inventory_yaml_file = os.path.join('DataSources', 'Inventory.yaml')
  

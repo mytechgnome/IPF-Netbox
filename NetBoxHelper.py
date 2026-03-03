@@ -1,5 +1,5 @@
 '''
-Module to export information from NetBoxx
+Module to import/export data to/from NetBox
 
 Created by: Dan Kelcher
 Date: January 20, 2025
@@ -17,7 +17,7 @@ netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = NetBoxloader.load_netbo
 '''
 Usage Example:
 import Netboxloader
-netbox_data = NetBoxexporter.get_netbox_data('dcim/devices'))
+netbox_data = NetBoxHelper.get_netbox_data('dcim/devices'))
 print(netbox_data)
 This will fetch device hostname, serial number, and site name from NetBox's inventory/devices table.
 
@@ -73,14 +73,14 @@ def patch_netbox_data(endpoint, payload):
 
 # region # Test function
 if __name__ == "__main__":
-    print('This is a helper module to export data from NetBox. Please import and use the export_netbox_data function in your script to fetch data from NetBox.')
+    print('This is a helper module to export data from NetBox and import data into NetBox. Please import and use the functions in your script to work with data from NetBox.')
     print('Testing get_netbox_data function...')
     # The example endpoint should be contain more items than the NetBox limit to test pagination
     netbox_data = get_netbox_data('dcim/devices')
     if len(netbox_data) > netboxlimit:
-        print(f"Pagination test passed: Retrieved {len(netbox_data)} records.")
+        print(f"\nPagination test passed: Retrieved {len(netbox_data)} records.")
     else:
-        print(f"Pagination test incomplete: Retrieved {len(netbox_data)} records, which may not exceed the limit of {netboxlimit}.")
+        print(f"\nPagination test incomplete: Retrieved {len(netbox_data)} records, which may not exceed the limit of {netboxlimit}.")
     print('Test complete.')
     printdata = input('Print fetched data? (y/n): ')
     if printdata.lower() == 'y':
