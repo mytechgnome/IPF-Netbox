@@ -153,16 +153,15 @@ def add_device_type_components(yaml_object, objecttype, deviceID, netboxbaseurl,
             for component in componentyaml:
                 component[f'{objecttype}_type'] = deviceID
                 jsondata = json.dumps(component)
+                jsondata = json.loads(jsondata)
                 if componenttype == 'module-bay':
                     jsondata = set_module_bay_label(component)
-                #jsondata = json.loads(jsondata)
                 r = requests.post(url,headers=netboxheaders,json=jsondata,verify=False)
                 if r.status_code != 201:
                     error_text = f'{deviceID},{componenttype},{r.status_code},{r.text},{jsondata}'
                     errors_importcomponents.append(error_text)
 
 def set_module_bay_label(jsondata):
-    print(jsondata)
     try:
         if jsondata['label'] != None:
             return jsondata
