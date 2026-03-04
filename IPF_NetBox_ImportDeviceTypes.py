@@ -153,11 +153,34 @@ def add_device_type_components(yaml_object, objecttype, deviceID, netboxbaseurl,
             for component in componentyaml:
                 component[f'{objecttype}_type'] = deviceID
                 jsondata = json.dumps(component)
-                jsondata = json.loads(jsondata)
+                if componenttype == 'module-bay':
+                    jsondata = set_module_bay_label(component)
+                #jsondata = json.loads(jsondata)
                 r = requests.post(url,headers=netboxheaders,json=jsondata,verify=False)
                 if r.status_code != 201:
                     error_text = f'{deviceID},{componenttype},{r.status_code},{r.text},{jsondata}'
                     errors_importcomponents.append(error_text)
+
+def set_module_bay_label(jsondata):
+    print(jsondata)
+    try:
+        if jsondata['label'] != None:
+            return jsondata
+    except KeyError:
+        fanlist = ['fan']
+        powerlist = ['power', 'psu', 'ps']
+        networklist = ['network', 'fabric', 'uplink', 'line']
+        suplist = ['sup', 'route', 'rp', 'route processor']
+        if any(keyword in jsondata['name'].lower() for keyword in fanlist):
+            jsondata['label'] = 'Fan'
+        elif any(keyword in jsondata['name'].lower() for keyword in powerlist):
+            jsondata['label'] = 'Power'
+        elif any(keyword in jsondata['name'].lower() for keyword in networklist):
+            jsondata['label'] = 'Network'
+        elif any(keyword in jsondata['name'].lower() for keyword in suplist):
+            jsondata['label'] = 'Supervisor'
+        return jsondata
+
 # region # DeviceType-Library download
 # region ## Create repo directory if it doesn't exist
 if not os.path.exists(repodir):
