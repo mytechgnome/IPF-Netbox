@@ -1,5 +1,6 @@
 version: 1
 schema: ipf-netbox-module-mapping
+
 globals:
   prefix_map:
     Te: TenGigabitEthernet
@@ -12,14 +13,17 @@ globals:
     GigabitEthernet: GigabitEthernet
     HundredGigE: HundredGigE
     TwentyFiveGigE: TwentyFiveGigE
+    FortyGigE: FortyGigE                # added to catch alt form
+    HundredGigabitEthernet: HundredGigE # added to catch long form
+
   transforms:
-    - regex: '^\s*Switch\s*\d+\s*[- ]\s*'
+    - regex: '^\s*Switch\s*\d+\s*\[- \]\s*'
       replace: ''
     - regex: '\s+'
       replace: ' '
-    - regex: 'PSU[-\s]?'
+    - regex: 'PSU\[-\s\]?'
       replace: 'PSU'
-    - regex: 'PS[-\s]?'
+    - regex: 'PS\[-\s\]?'
       replace: 'PS'
     # C9500 wording
     - regex: 'Power\s*Supply\s*Module\s*'
@@ -27,8 +31,26 @@ globals:
     # zero-indexed fan trays
     - regex: 'Fan\s*Tray\s*0'
       replace: 'Fan 1'
+
   # Keep variants exact unless you add entries here:
-  pid_aliases: {}
+  pid_aliases:
+    glc-lx-sm-rgd: GLC-LX-SM-RGD
+    glc-sx-mm-rgd: GLC-SX-MM-RGD
+    glc-lh-smd: GLC-LH-SMD
+    sfp-10g-lr: SFP-10G-LR
+    sfp-10g-lr-s: SFP-10G-LR-S
+    qsfp-40g-sr-bd: QSFP-40G-SR-BD
+    qsfp-40g-lr4: QSFP-40G-LR4
+    # Additions based on field sightings
+    glc-lh-sm-ax: GLC-LH-SMD
+    glc-lh-sm-gt: GLC-LH-SMD
+    qsfp-40g-lr4-s: QSFP-40G-LR4-S
+    sfp-h10gb-cu3m: SFP-H10GB-CU3M
+    sfp-h10gb-cu7m: SFP-H10GB-CU7M
+    ftlf1318p2bcl-cs: FTLF1318P2BCL-CS
+    ftrj-1319-7d-csc: FTRJ-1319-7D-CSC
+    sfct-5798pz-cs3: SFCT-5798PZ-CS3
+
   # Fallbacks only when PID is missing/Unspecified
   dscr_to_pid:
     '1000BaseSX SFP': GLC-SX-MMD
@@ -38,6 +60,14 @@ globals:
     'SFP-10GBase-SR': SFP-10G-SR
     'QSFP 40GE LR4': QSFP-40G-LR4
     'QSFP-40G-SR-BD': QSFP-40G-SR-BD
+    "AC power supply": NXA-PAC-1100W-B
+    # Additional description fallbacks seen in IPF
+    'GE LX': GLC-LH-SMD
+    'GE SX': GLC-SX-MMD
+    '1000BaseLH': GLC-LH-SMD
+    'SFP-10Gbase-LR': SFP-10G-LR
+    'SFP-10Gbase-SR': SFP-10G-SR
+    "Transceiver(slot": auto-transceiver  # leave as hint category only
 
 categories:
   power:
@@ -85,6 +115,7 @@ categories:
       - 'Slot {SLOT}'
       - 'Fan Module {NUM}'
       - 'Fan Tray {NUM}'
+      - 'Chassis Fan Module {NUM}'   # extra synonym seen in IPF
 
   supervisor:
     keywords: [supervisor, sup]
@@ -119,7 +150,7 @@ categories:
       - 'Stack Port {PATH}'
 
   sfp:
-    keywords: [sfp, gbic, glc, qsfp, transceiver]
+    keywords: ["sfp", "transceiver", "glc", "sfp-10g", "qsfp", "ftlf", "sfct"]
     ipf_patterns:
       - '^(?P<pfx>Te|Gi|Hu|Twe|Eth|Ethernet|TenGigabitEthernet|GigabitEthernet|HundredGigE|TwentyFiveGigE)(?P<path>\d+(?:/\d+)+)$'
       - '^(?:subslot\s*\d+/\d+\s*transceiver\s*(?P<num>\d+))$'

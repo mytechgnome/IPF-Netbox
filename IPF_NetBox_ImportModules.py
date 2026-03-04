@@ -107,6 +107,140 @@ category_keywords = {c:set(d.get('keywords') or []) for c,d in category_defs.ite
 
 FUZZY_CUTOFF = {'sfp':0.90,'power':0.80,'fan':0.80,'supervisor':0.85,'network':0.80,'other':0.75}
 
+# Heuristic bay types per module category
+CATEGORY_BAY_FILTERS = {
+    'sfp': {
+        'labels': {'sfp', 'sfp+', 'sfp-10g', 'sfp28', 'sfp-1g'},
+        'name_starts': set(),
+        'name_contains': set(),
+        'allow_fuzzy': True,
+        'allow_numeric_tail': True,
+    },
+    'qsfp': {
+        'labels': {'qsfp', 'qsfp+', 'qsfp28', 'qsfp-40g', 'qsfp-100g'},
+        'name_starts': set(),
+        'name_contains': set(),
+        'allow_fuzzy': True,
+        'allow_numeric_tail': True,
+    },
+    'power': {
+        'labels': set(),                      # PSUs often have blank labels
+        'name_starts': {'psu'},               # e.g., PSU0 / PSU1
+        'name_contains': {'power', 'psu', 'pwr'},
+        'allow_fuzzy': False,
+        'allow_numeric_tail': False,
+    },
+    'fan': {
+        'labels': set(),
+        'name_starts': {'fan'},               # e.g., Fan0 / Fan1
+        'name_contains': {'fan'},
+        'allow_fuzzy': False,
+        'allow_numeric_tail': False,
+    },
+    'supervisor': {
+        'labels': set(),
+        'name_starts': {'sup', 'supervisor'},
+        'name_contains': {'sup', 'supervisor'},
+        'allow_fuzzy': False,
+        'allow_numeric_tail': False,
+    },
+    'network': {
+        'labels': set(),
+        'name_starts': {'slot', 'fabric'},
+        'name_contains': {'slot', 'fabric', 'module'},
+        'allow_fuzzy': False,
+        'allow_numeric_tail': False,
+    },
+    'other': {
+        'labels': set(),
+        'name_starts': set(),
+        'name_contains': set(),
+        'allow_fuzzy': False,
+        'allow_numeric_tail': False,
+    }
+}
+
+def _eligible_bays_for_category(by_name: dict, category: str):
+    """Return a filtered dict {lower_name: bay_obj} of bays that fit the category."""
+    filt = CATEGORY_BAY_FILTERS.get(category, CATEGORY_BAY_FILTERS['other'])
+    eligible = {}
+    for nm_lower, mb in by_name.items():
+        nm = (mb.get('name') or '').lower().strip()
+        lbl = (mb.get('label') or '').lower().strip()
+        ok = False
+        if filt['labels']:
+            ok |= lbl in filt['labels']
+        # Heuristics when labels are empty/unused
+        if filt['name_starts']:
+            ok |= any(nm.startswith(s) for s in filt['name_starts'])
+        if filt['name_contains']:
+            ok |= any(s in nm for s in filt['name_contains'])
+        if ok:
+            eligible[nm_lower] = mb
+    # If nothing matched and category was sfp/qsfp, fall back to all by_name (some DTs omit labels)
+    if not eligible and category in ('sfp', 'qsfp'):
+        return by_name
+    return eligible
+
+def find_module_bay_id(device_id, category, raw_name):
+    device_mbs = module_bays_by_device.get(device_id, {})
+    by_name_all = device_mbs.get('by_name', {})
+    by_pos = device_mbs.get('by_pos', {})
+
+    # Filter bays by category first
+    by_name = _eligible_bays_for_category(by_name_all, category)
+    norm = normalize_with_yaml(raw_name, category)
+    cands = build_candidates(category, norm)
+
+    # 1) exact name match within eligible set
+    for c in cands:
+        hit = by_name.get(c.lower())
+        if hit:
+            return hit['id']
+    filt = CATEGORY_BAY_FILTERS.get(category, CATEGORY_BAY_FILTERS['other'])
+
+    # 2) numeric tail (only for interface-like categories)
+    if filt['allow_numeric_tail']:
+        target = next((c for c in cands if re.search(r'(\d+)', c)), '')
+        nums = re.findall(r'(\d+)', target)
+        last_seg = nums[-1] if nums else None
+        if last_seg:
+            # names that end with '/X'
+            for nm, mb in by_name.items():
+                if nm.endswith(f'/{last_seg}'):
+                    return mb['id']
+            # position equals X
+            pos_hit = by_pos.get(str(last_seg))
+            if pos_hit:
+                return pos_hit['id']
+
+    # 3) fuzzy (only for interface-like categories)
+    if filt['allow_fuzzy'] and by_name:
+        cutoff = FUZZY_CUTOFF.get(category, modulelnamesensitivity)
+        names = list(by_name.keys())
+        for c in cands[:10]:
+            m = get_close_matches(c.lower(), names, n=1, cutoff=cutoff)
+            if m:
+                mb = by_name[m[0]]
+                return mb['id']
+    return None
+
+# Before posting, enforce final guard
+def _bay_consistent_with_category(mb_obj, category: str) -> bool:
+    lbl = (mb_obj.get('label') or '').lower().strip()
+    nm  = (mb_obj.get('name') or '').lower().strip()
+    filt = CATEGORY_BAY_FILTERS.get(category, CATEGORY_BAY_FILTERS['other'])
+    if filt['labels'] and lbl in filt['labels']:
+        return True
+    if any(nm.startswith(s) for s in filt['name_starts']):
+        return True
+    if any(s in nm for s in filt['name_contains']):
+        return True
+    # Interface categories without labels: allow if name looks like a port
+    if category in ('sfp', 'qsfp') and re.match(r'^(ethernet|gigabitethernet|tengigabitethernet|hundredgige|twentyfivegige)\d+',
+                                                nm, flags=re.IGNORECASE):
+        return True
+
 def apply_transforms(s):
     out = s or ''
     for t in transforms:
@@ -306,9 +440,17 @@ def module_import(source_modules, bucket_name):
         if not device_id: reasons.append('no_device')
         # bay
         module_bay_id = None
+        bay_obj = None
         if device_id:
+            # Find bay id
             module_bay_id = find_module_bay_id(device_id, module.get('category') or 'other', module.get('name') or '')
-        if not module_bay_id: reasons.append('no_module_bay')
+            if module_bay_id:
+                # Retrieve bay object for the guard
+                bay_obj = next((mb for mb in module_bays_by_device.get(device_id, {}).get('by_name', {}).values()
+                                if mb.get('id') == module_bay_id), None)
+                if bay_obj and not _bay_consistent_with_category(bay_obj, module.get('category') or 'other'):
+                    reasons.append('category_label_mismatch')
+                    module_bay_id = None
 
         data = {
             'hostname': module.get('hostname'),
@@ -518,6 +660,7 @@ sfp_modules_to_create = module_import(module_buckets.get('sfp', []), 'sfp')
 with (log_dir / 'sfp_modules_with_errors.csv').open('w', encoding='utf-8') as f:
     f.write('\n'.join(error_rows['sfp']))
 create_modules_in_netbox('sfp', sfp_modules_to_create)
+print("\nSFP module creation complete.")
 # endregion
 
 # region ### Update VC member interface names to have correct member number in name/label/position
