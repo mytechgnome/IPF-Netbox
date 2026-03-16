@@ -328,7 +328,7 @@ for i in ipf_models:
     taskstart = datetime.now()
     objecttype = 'device'
     vendor = i['vendor']
-    manufacturerID = netbox_vendors.get(vendor.lower(), None)
+    manufacturerID = netbox_vendors.get(get_close_matches(vendor.lower(), netbox_vendors.keys(), n=1, cutoff=vendornamesensitivity)[0], None)
     if not manufacturerID:
         print(f'No manufacturer found in NetBox for vendor {vendor}. Please import vendors first.')
         continue
