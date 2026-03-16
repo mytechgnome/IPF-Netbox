@@ -86,7 +86,7 @@ else:
 # endregion
 # region ## Set variables from .env file
 load_dotenv(override=True)
-modellnamesensitivity = float(os.getenv('modellnamesensitivity', '0.8'))
+modelnamesensitivity = float(os.getenv('modelnamesensitivity', '0.8'))
 # endregion
 
 # region # Export data from IP Fabric
@@ -181,8 +181,10 @@ for device in ipf_devices:
 #endregion
 # region ## Append data from lookup tables
     device['device_type_ID'] = device_type_lookup.get(device['model'], None)
+    if not device['device_type_ID']:  # Attempt uppercase match if exact match not found
+        device['device_type_ID'] = device_type_lookup.get(device['model'].upper(), None)
     if not device['device_type_ID']: # Attempt fuzzy match if exact match not found
-        fuzzy_match = get_close_matches(device['model'], list(device_type_lookup.keys()), n=1, cutoff=modellnamesensitivity)
+        fuzzy_match = get_close_matches(device['model'], list(device_type_lookup.keys()), n=1, cutoff=modelnamesensitivity)
         if fuzzy_match:
             device['device_type_ID'] = device_type_lookup.get(fuzzy_match[0], None)
     device['device_role_ID'] = device_role_lookup.get(device['devType'], None)

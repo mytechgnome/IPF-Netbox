@@ -48,12 +48,12 @@ def create_env_file():
             vendornamesensitivity = '0.8'
         else:
             vendornamesensitivity = str(int(vendornamesensitivity) / 10)
-        modellnamesensitivity = input('Set model name case sensitivity (1-10, 10 = exact match): ').strip()
-        if not modellnamesensitivity.isdigit() or not (1 <= int(modellnamesensitivity) <= 10):
+        modelnamesensitivity = input('Set model name case sensitivity (1-10, 10 = exact match): ').strip()
+        if not modelnamesensitivity.isdigit() or not (1 <= int(modelnamesensitivity) <= 10):
             print('Invalid input. Defaulting to 8.')
-            modellnamesensitivity = '0.8'
+            modelnamesensitivity = '0.8'
         else:
-            modellnamesensitivity = str(int(modellnamesensitivity) / 10)
+            modelnamesensitivity = str(int(modelnamesensitivity) / 10)
         deviceimagesensitivity = input('Set device image name case sensitivity (1-10, 10 = exact match): ').strip()
         if not deviceimagesensitivity.isdigit() or not (1 <= int(deviceimagesensitivity) <= 10):
             print('Invalid input. Defaulting to 8.')
@@ -99,7 +99,7 @@ def create_env_file():
             f.write(vendornamesensitivity)
             f.write('\n')
             f.write('modelnamesensitivity=')
-            f.write(modellnamesensitivity)
+            f.write(modelnamesensitivity)
             f.write('\n')
             f.write('deviceimagesensitivity=')
             f.write(deviceimagesensitivity)

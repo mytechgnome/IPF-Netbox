@@ -89,7 +89,7 @@ else:
 # region ## Set variables from .env file
 load_dotenv(override=True)
 vendornamesensitivity = float(os.getenv('vendornamesensitivity', '0.8'))
-modellnamesensitivity = float(os.getenv('modellnamesensitivity', '0.8'))
+modelnamesensitivity = float(os.getenv('modelnamesensitivity', '0.8'))
 deviceimagesensitivity = float(os.getenv('deviceimagesensitivity', '0.8'))
 modulenamesensitivity = float(os.getenv('modulenamesensitivity', '0.8'))
 reposource = os.getenv('reposource', 'https://github.com/netbox-community/devicetype-library.git')
@@ -113,7 +113,7 @@ os.makedirs(log_dir, exist_ok=True)
 
 # region # Validate .env settings
 # region ## Verify sensitivity settings
-for setting in [vendornamesensitivity, modellnamesensitivity, deviceimagesensitivity, modulenamesensitivity]:
+for setting in [vendornamesensitivity, modelnamesensitivity, deviceimagesensitivity, modulenamesensitivity]:
     if setting < 0 or setting > 1:
         print('Sensitivity settings must be between 0 and 1. Please update the .env file.')
         exit()
@@ -341,28 +341,28 @@ for i in ipf_models:
     model = i['model']
     models = os.listdir(os.path.join(repodir, 'device-types', vendorlibrary))
     basemodelnames = [os.path.splitext(model.lower())[0] for model in models]
-    devicetypelibrary = get_close_matches(model.lower(),basemodelnames, n=1 , cutoff=modellnamesensitivity)
+    devicetypelibrary = get_close_matches(model.lower(),basemodelnames, n=1 , cutoff=modelnamesensitivity)
     if not devicetypelibrary:
         # Try matching with model and vendor combined
         combinedmodel = f'{vendor}-{model}'
-        devicetypelibrary = get_close_matches(combinedmodel.lower(), basemodelnames, n=1 , cutoff=modellnamesensitivity)
+        devicetypelibrary = get_close_matches(combinedmodel.lower(), basemodelnames, n=1 , cutoff=modelnamesensitivity)
         if not devicetypelibrary:
             # Try matching with model and family combined
             family = i['family']
             combinedmodel = f'{family}-{model}'
-            devicetypelibrary = get_close_matches(combinedmodel.lower(), basemodelnames, n=1 , cutoff=modellnamesensitivity)
+            devicetypelibrary = get_close_matches(combinedmodel.lower(), basemodelnames, n=1 , cutoff=modelnamesensitivity)
             if not devicetypelibrary:
                 # Try matching with model add platform combined
                 platform = i['platform']
                 combinedmodel = f'{platform}-{model}'
-                devicetypelibrary = get_close_matches(combinedmodel.lower() , basemodelnames, n=1 , cutoff=modellnamesensitivity)
+                devicetypelibrary = get_close_matches(combinedmodel.lower() , basemodelnames, n=1 , cutoff=modelnamesensitivity)
                 if not devicetypelibrary:
                     nomatch += 1
                     error_text = f'{vendorlibrary},{model}'
                     errors_matchdevice.append(error_text)
     if devicetypelibrary:
         score = SequenceMatcher(None, model.lower(), devicetypelibrary[0]).ratio()
-        if score >= modellnamesensitivity:
+        if score >= modelnamesensitivity:
             mapping_device = f'{model},Success,{devicetypelibrary[0]},{score:.2f}'
         elif not devicetypelibrary:
             mapping_device = f'{model},Fail,No Match,'
