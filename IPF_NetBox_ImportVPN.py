@@ -13,6 +13,8 @@ from NetBoxHelper import *
 import argparse
 from datetime import datetime
 
+starttime = datetime.now()
+
 # region ## Process arguments for branch selection
 ap = argparse.ArgumentParser(description="Import Sites from IP Fabric into NetBox")
 ap.add_argument("--branch", help="Create a NetBox branch for this import")
@@ -87,5 +89,6 @@ for vpn in netbox_vpns:
     taskduration.append((taskend - taskstart).total_seconds())
     remaining = sum(taskduration) / len(taskduration) * (len(netbox_vpns) - counter)
     print(f'Import progress: [{"█" * int(counter/len(netbox_vpns)*100):100}]{counter/len(netbox_vpns)*100:.2f}% Complete - ({counter}/{len(netbox_vpns)}) VPNs imported. Remaining: {remaining:.2f}s    ', end="\r")
-print(f'\nVPN import process completed. Total Success: {success_count}, Failed: {counter - success_count}')
+endtime = datetime.now()
+print(f'\nVPN import process completed in {(endtime - starttime).total_seconds():.2f} seconds. Total: {len(netbox_vpns)}, Success: {success_count}, Failed: {counter - success_count}')
 # endregion
