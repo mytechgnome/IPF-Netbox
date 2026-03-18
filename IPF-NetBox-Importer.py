@@ -14,7 +14,6 @@ if use_branch:
     print("Creating NetBox branch for import...")
     from NetBoxloader import load_netbox_config
     import requests
-    import time
     timestamp = starttime.strftime("%Y%m%d-%H%M%S")
     branchname = f'IPF_import_{timestamp}'
     netboxbaseurl, netboxtoken, netboxheaders, netboxlimit = load_netbox_config()
@@ -41,6 +40,7 @@ subprocess.run(["python", "IPF_NetBox_ImportRoles.py", '--branch', schemaID])
 subprocess.run(["python", "IPF_NetBox_ImportPlatforms.py", '--branch', schemaID])
 subprocess.run(["python", "IPF_NetBox_ImportWireless.py", '--branch', schemaID])
 subprocess.run(["python", "IPF_NetBox_ImportVirtualChassis.py", '--branch', schemaID])
+subprocess.run(["python", "IPF_NetBox_ImportVPN.py", '--branch', schemaID])
 subprocess.run(["python", "IPF_NetBox_ImportDeviceTypes.py", '--branch', schemaID])
 subprocess.run(["python", "IPF_NetBox_ImportDevices.py", '--branch', schemaID])
 subprocess.run(["python", "IPF_NetBox_ImportVDC.py", '--branch', schemaID])
@@ -48,4 +48,4 @@ subprocess.run(["python", "IPF_NetBox_ImportModules.py", '--branch', schemaID])
 subprocess.run(["python", "IPF_NetBox_ImportCables.py", '--branch', schemaID])
 endtime = datetime.now()
 duration = endtime - starttime
-print(f'Device import process completed. Duration: {duration}')
+print(f'Import process completed. Duration: {duration}')
