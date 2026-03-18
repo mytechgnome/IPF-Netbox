@@ -11,7 +11,7 @@ from NetBoxloader import load_netbox_config
 from IPFexporter import export_ipf_data
 from NetBoxHelper import *
 import argparse
-import datetime
+from datetime import datetime
 
 # region ## Process arguments for branch selection
 ap = argparse.ArgumentParser(description="Import Sites from IP Fabric into NetBox")
