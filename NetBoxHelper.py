@@ -46,24 +46,30 @@ def get_netbox_data(endpoint, netboxlimit=netboxlimit, filters=[]):
         netbox_data.extend(r.json()['results'])
     return netbox_data
 # region ## Post data to NetBox
-def post_netbox_data(endpoint, payload):
+def post_netbox_data(endpoint, payload, schemaID=None):
     url = f'{netboxbaseurl}{endpoint}/'
+    if schemaID:
+        url += f'?_branch={schemaID}'
     r = requests.post(url, headers=netboxheaders, json=payload, verify=False)
     netbox_data = r.json()
     # Fetch additional pages if necessary
     return netbox_data
 # endregion
 # region ## Put data to NetBox
-def put_netbox_data(endpoint, payload):
+def put_netbox_data(endpoint, payload, schemaID=None):
     url = f'{netboxbaseurl}{endpoint}/'
+    if schemaID:
+        url += f'?_branch={schemaID}'
     r = requests.put(url, headers=netboxheaders, json=payload, verify=False)
     netbox_data = r.json()['results']
     # Fetch additional pages if necessary
     return netbox_data
 # endregion
 # region ## Patch data to NetBox
-def patch_netbox_data(endpoint, payload):
+def patch_netbox_data(endpoint, payload, schemaID=None):
     url = f'{netboxbaseurl}{endpoint}/'
+    if schemaID:
+        url += f'?_branch={schemaID}'
     r = requests.patch(url, headers=netboxheaders, json=payload, verify=False)
     netbox_data = r.json()['results']
     # Fetch additional pages if necessary
